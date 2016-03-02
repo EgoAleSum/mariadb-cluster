@@ -1,0 +1,208 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D1",
+      "metadata": {
+        "description": "Instance size for the VMs"
+      }
+    },
+    "storageAccountNamePrefix": {
+      "type": "string",
+      "defaultValue": "aletest",
+      "maxLength": 8,
+      "metadata": {
+        "description": "Name prefix for the storage accounts"
+      }
+    },
+    "numberOfNodes": {
+      "type": "int",
+      "defaultValue": 3,
+      "minValue": 3,
+      "metadata": {
+        "description": "Number of compute nodes to create"
+      }
+    },
+    "adminUserName": {
+      "type": "string",
+      "defaultValue": "core",
+      "metadata": {
+        "description": "Username to login to the VMs"
+      }
+    },
+    "sshKeyData": {
+      "type": "string",
+      "metadata": {
+        "description": "Public key for SSH authentication"
+      }
+    },
+    "cloudConfig": {
+      "type": "string",
+      "metadata": {
+        "description": "Base64-encoded cloud-config.yaml file"
+      }
+    }
+  },
+  "variables": {
+    "virtualNetworkName": "[concat( resourceGroup().name, '-VNet' )]",
+    "addressPrefix": "10.0.0.0/16",
+    "subnet1Name": "Subnet-1",
+    "subnet1Prefix": "10.0.1.0/24",
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
+    "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
+    "vmNamePrefix": "[concat( resourceGroup().name, '-VM' )]",
+    "osImageSku": "Beta",
+    "publicIpNamePrefix": "[concat( resourceGroup().name, '-IP' )]",
+    "nicNamePrefix": "[concat( resourceGroup().name, '-NIC' )]",
+    "vhdStorageAccountName": "[toLower( concat( parameters('storageAccountNamePrefix'), 'vhd', uniqueString(resourceGroup().id) ) )]",
+    "vhdStorageAccountType": "Standard_LRS",
+    "diagStorageAccountName": "[toLower( concat( parameters('storageAccountNamePrefix'), 'dgn', uniqueString(resourceGroup().id) ) )]",
+    "diagStorageAccountType": "Standard_LRS",
+    "sshKeyPath": "[concat('/home/', parameters('adminUsername'),'/.ssh/authorized_keys')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('vhdStorageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "properties": {
+        "accountType": "[variables('vhdStorageAccountType')]"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('diagStorageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "properties": {
+        "accountType": "[variables('diagStorageAccountType')]"
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[concat(variables('publicIpNamePrefix'), copyindex())]",
+      "copy": {
+        "name": "ipLoop",
+        "count": "[parameters('numberOfNodes')]"
+      },
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-06-15",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnet1Name')]",
+            "properties": {
+              "addressPrefix": "[variables('subnet1Prefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(variables('nicNamePrefix'), copyindex())]",
+      "copy": {
+        "name": "nicLoop",
+        "count": "[parameters('numberOfNodes')]"
+      },
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIpNamePrefix'), copyindex())]",
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "apiVersion": "2015-05-01-preview",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIpAddresses', concat(variables('publicIpNamePrefix'), copyindex()))]"
+              },
+              "subnet": {
+                "id": "[variables('subnet1Ref')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(variables('vmNamePrefix'), copyindex())]",
+      "copy": {
+        "name": "vmLoop",
+        "count": "[parameters('numberOfNodes')]"
+      },
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Storage/storageAccounts/', variables('vhdStorageAccountName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('diagStorageAccountName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicNamePrefix'), copyindex())]"
+      ],
+      "apiVersion": "2015-05-01-preview",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(variables('vmNamePrefix'), copyindex())]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "customData": "[parameters('cloudConfig')]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": "true",
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[variables('sshKeyPath')]",
+                  "keyData": "[parameters('sshKeyData')]"
+                }
+              ]
+            }
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "CoreOS",
+            "offer": "CoreOS",
+            "sku": "[variables('osImageSku')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[concat(variables('vmNamePrefix'), copyindex())]",
+            "vhd": {
+              "uri": "[concat('http://',variables('vhdStorageAccountName'),'.blob.core.windows.net/vhds/',variables('vmNamePrefix'), copyindex(),'-OS', '.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(variables('nicNamePrefix'), copyindex()))]"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

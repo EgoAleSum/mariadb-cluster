@@ -1,0 +1,24 @@
+[Unit]
+Description=MariaDB with Galera Cluster
+
+Requires=docker.service docker-overlay-network.service
+Wants=network-online.target
+After=docker.service docker-overlay-network.service network-online.target
+
+[Service]
+Restart=always
+RestartSec=1
+TimeoutStartSec=0
+
+ExecStartPre=/usr/bin/chmod +x /opt/bin/docker-mariadb-galera.sh
+ExecStart=/opt/bin/docker-mariadb-galera.sh
+
+ExecStop=/bin/bash -c " \
+  HOSTNAME=$(/bin/hostname) \
+  HOSTNUM=$(/bin/expr $HOSTNAME : '.*\\([0-9]\\)') \
+  /usr/bin/docker stop mariadb-node-$HOSTNUM || true \
+  /usr/bin/docker rm mariadb-node-$HOSTNUM || true \
+"
+
+[Install]
+WantedBy=multi-user.target
