@@ -1,3 +1,10 @@
+/*
+  build-cloud-config.js
+  
+  This script generates the cloud-config.yaml file including all the scripts/units.
+  It will also include an etcd discovery url, requesting it automatically if unspecified.
+*/
+
 'use strict'
 
 // Load modules
@@ -8,14 +15,14 @@ let request = require('request-promise')
 let co = require('co')
 
 co(function* () { try {
-    // Parse console parameters and lowercase all keys
+    // Parse console parameters
     let argv = require('minimist')(process.argv.slice(2))
     
     // Has user requested the help page?
     if(argv.h || argv.help) {
         let options = {
-            '--cluster_size': 'Size of the etcd cluster. Optional but strongly recommended if discovery_url is empty. Default: 3',
-            '--discovery_url': 'Discovery url for etcd; will be generated automatically if empty',
+            '--cluster-size': 'Size of the etcd cluster. Optional but strongly recommended if discovery-url is empty. Default: 3',
+            '--discovery-url': 'Discovery url for etcd; will be generated automatically if empty',
             '-h, --help': 'Display this message'
         }
         console.log('Generate a cloud-config.yaml file for the template.\nSupported options:')
@@ -30,11 +37,11 @@ co(function* () { try {
     
     // Check if a discovery url for etcd has been passed; otherwise, request one
     let etcdDiscoveryUrl = false
-    if(argv.discovery_url) {
-        etcdDiscoveryUrl = argv.discovery_url
+    if(argv['discovery-url']) {
+        etcdDiscoveryUrl = argv['discovery-url']
     }
     else {
-        let clusterSize = argv.cluster_size ? parseInt(argv.cluster_size) : 3
+        let clusterSize = argv['cluster-size'] ? parseInt(argv['cluster-size']) : 3
         if(clusterSize < 2 || clusterSize > 9) {
             throw new Error('Invalid cluster size: has to be between 2 and 9')
         }
@@ -186,9 +193,13 @@ co(function* () { try {
     
     // Generate the yaml file and write it to disk
     let yamlString = "#cloud-config\n\n" + yaml.safeDump(yamlTree, {lineWidth: -1})
-    yield fs.writeFile('cloud-config.yaml', yamlString, 'utf8')
+    yield [
+        fs.writeFile('cloud-config.yaml', yamlString, 'utf8'),
+        fs.writeFile('cloud-config.yaml.b64', new Buffer(yamlString).toString('base64'), 'utf8')
+    ]
     
     console.log('cloud-config.yaml generated')
+    console.log('cloud-config.yaml.b64 generated')
 } catch (err) { return Promise.reject(err) }})
 .catch(function(err) {
     console.error(err.stack)

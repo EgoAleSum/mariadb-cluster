@@ -11,7 +11,6 @@
     },
     "storageAccountNamePrefix": {
       "type": "string",
-      "defaultValue": "aletest",
       "maxLength": 8,
       "metadata": {
         "description": "Name prefix for the storage accounts"

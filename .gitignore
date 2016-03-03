@@ -1,4 +1,5 @@
 cloud-config.yaml
+cloud-config.yaml.b64
 
 # Created by https://www.gitignore.io/api/node,osx,windows,linux
 
