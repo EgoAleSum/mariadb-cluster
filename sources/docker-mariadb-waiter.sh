@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# This script is invoked by ExecStartPost in the docker-mariadb-galera unit, and updates the status in etcd only after MariaDB is actually initialized and ready to accept connections
+# This script updates the status in etcd only after MariaDB is actually initialized and ready to accept connections
 
 # Parameters
 IMAGE_NAME="mariadb:10.1"
@@ -10,13 +10,13 @@ curl --silent --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized > 
 if [ $? -ne 0 ]; then
     sleep 10
     
-    while ! docker run --rm --net mariadb-overlay-net $IMAGE_NAME mysqladmin ping -hmariadb-node-0 --silent; do
+    while ! docker run --rm $IMAGE_NAME mysqladmin ping -h mariadb-node-0 --silent; do
         sleep 5
     done
     
     # Wait 5 more seconds before sending the green light
     sleep 5
     
-    # Server is ready: other nodes to connect
+    # Server is ready: other nodes can now connect
     curl -L http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized -XPUT -d value="true"
 fi

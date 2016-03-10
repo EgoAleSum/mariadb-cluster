@@ -71,27 +71,22 @@ co(function* () { try {
     // List of files for write_files
     let readFiles = {
         'docker-mariadb-galera.sh': {
-            'dest': '/opt/bin/docker-mariadb-galera.sh',
+            'path': '/opt/bin/docker-mariadb-galera.sh',
             'owner': 'root',
             'permissions': '0755'
         },
         'docker-mariadb-waiter.sh': {
-            'dest': '/opt/bin/docker-mariadb-waiter.sh',
-            'owner': 'root',
-            'permissions': '0755'
-        },
-        'docker-overlay-network.sh': {
-            'dest': '/opt/bin/docker-overlay-network.sh',
+            'path': '/opt/bin/docker-mariadb-waiter.sh',
             'owner': 'root',
             'permissions': '0755'
         },
         'etcd-waiter.sh': {
-            'dest': '/opt/bin/etcd-waiter.sh',
+            'path': '/opt/bin/etcd-waiter.sh',
             'owner': 'root',
             'permissions': '0755'
         },
         'mysql_server.cnf': {
-            'dest': '/opt/mysql.conf.d/mysql_server.cnf',
+            'path': '/opt/mysql.conf.d/mysql_server.cnf',
             'owner': 'root',
             'permissions': '0644'
         }
@@ -99,11 +94,10 @@ co(function* () { try {
     
     // List of systemd units
     let units = [
-        { 'name': 'docker.service', 'command': 'start', 'drop-ins-source': {'10-opts.conf': 'dropin-docker.conf'} },
+        { 'name': 'docker.service', 'command': 'start' },
         { 'name': 'etcd2.service', 'command': 'start' },
         { 'name': 'docker-mariadb-galera.service', 'command': 'start', 'source': 'docker-mariadb-galera.service' },
         { 'name': 'docker-mariadb-waiter.service', 'command': 'start', 'source': 'docker-mariadb-waiter.service' },
-        { 'name': 'docker-overlay-network.service', 'command': 'start', 'source': 'docker-overlay-network.service' },
         { 'name': 'etcd-waiter.service', 'command': 'start', 'source': 'etcd-waiter.service' },
     ]
     

@@ -1,3 +1,5 @@
+# Output files
+azuredeploy.parameters.json
 cloud-config.yaml
 cloud-config.yaml.b64
 

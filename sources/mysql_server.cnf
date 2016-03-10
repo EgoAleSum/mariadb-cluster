@@ -10,7 +10,7 @@ query_cache_type=0
 [galera]
 wsrep_on=ON
 wsrep_provider="/usr/lib/galera/libgalera_smm.so"
-wsrep_cluster_address="gcomm://mariadb-node-0,mariadb-node-1,mariadb-node-2,mariadb-node-3,mariadb-node-4,mariadb-node-5,mariadb-node-6,mariadb-node-7,mariadb-node-8,mariadb-node-9"
+wsrep_cluster_address="gcomm://mariadb-node-0,mariadb-node-1,mariadb-node-2,mariadb-node-3,mariadb-node-4"
 wsrep-sst-method=rsync
 
 # Optional setting
