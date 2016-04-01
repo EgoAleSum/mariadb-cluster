@@ -6,6 +6,9 @@ var forms = require('./forms.source.js')
 var cloudConfig = require('./cloud-config.source.js')
 
 $(document).ready(function() {
+    // Hide the output panel
+    $('[gen-role="page"][gen-page="output"]').hide()
+    
     // Form mode: prepare, and set default to Azure Resource Manager template
     forms.prepareFormMode()
     forms.setFormMode('arm')

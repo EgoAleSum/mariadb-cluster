@@ -6,10 +6,12 @@
   "author": "Alessandro Segala",
   "license": "Unlicense",
   "dependencies": {
-    "js-yaml": "^3.5.0",
+    "co": "^4.6.0",
     "grunt": "^0.4.5",
     "grunt-browserify": "^5.0.0",
     "grunt-contrib-watch": "^1.0.0",
     "grunt-html-build": "^0.5.3",
+    "js-yaml": "^3.5.0",
+    "mz": "^2.4.0"
   }
 }
