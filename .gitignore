@@ -2,6 +2,10 @@
 azuredeploy.parameters.json
 cloud-config.yaml
 cloud-config.yaml.b64
+generator.html
+sources/app.build.js
+sources/cloud-config.pack.json
+
 
 # Created by https://www.gitignore.io/api/node,osx,windows,linux
 
