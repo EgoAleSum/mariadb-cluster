@@ -14,5 +14,5 @@ wsrep_cluster_address="gcomm://mariadb-node-0,mariadb-node-1,mariadb-node-2,mari
 wsrep-sst-method=rsync
 
 # Optional setting
-#wsrep_slave_threads=1
+wsrep_slave_threads={WSREP_SLAVE_THREADS}
 #innodb_flush_log_at_trx_commit=0
