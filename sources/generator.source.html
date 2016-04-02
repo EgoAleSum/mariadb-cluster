@@ -8,6 +8,9 @@
   
   <!-- Bootstrap -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+  
+  <!-- highlight.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.2.0/styles/default.min.css">
 </head>
 
 <body>
@@ -95,7 +98,7 @@
       
       <div class="form-group">
         <div class="col-sm-offset-3 col-sm-9">
-          <button type="submit" class="btn btn-primary">Generate</button>
+          <button type="submit" class="btn btn-primary" gen-role="generate-button">Generate</button>
         </div>
       </div>
     </form>
@@ -104,6 +107,23 @@
   <div class="container" gen-role="page" gen-page="output">
     <div class="page-header">
       <h1>Generated documents</h1>
+    </div>
+    
+    <button type="button" class="btn btn-default" gen-role="restart-button">Restart</button>
+    
+    <div gen-role="output" gen-content="arm">
+      <h2>Azure Resource Manager template</h2>
+      <pre><code class="json"></code></pre>
+    </div>
+    
+    <div gen-role="output" gen-content="yaml">
+      <h2>cloud-config.yaml</h2>
+      <pre><code class="yaml"></code></pre>
+    </div>
+    
+    <div gen-role="output" gen-content="yamlb64">
+      <h2>cloud-config.yaml (base64-encoded)</h2>
+      <pre><code class="nohighlight"></code></pre>
     </div>
   </div>
   
@@ -117,6 +137,9 @@
 <!-- build:script inline noprocess app -->
 <script type="text/javascript"></script>
 <!-- /build -->
+
+<!-- highlight.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.2.0/highlight.min.js"></script>
 
 </body>
 </html>

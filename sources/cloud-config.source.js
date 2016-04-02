@@ -124,8 +124,13 @@ var buildYaml = function(formValues, done) {
         yamlTree.coreos.units.push(push)
     }
     
+    // Generate YAML document
     var yamlString = "#cloud-config\n\n" + jsyaml.safeDump(yamlTree, {lineWidth: -1})
-    console.log(yamlString)
+    
+    // Convert to base64 (note: this does NOT support UTF-8)
+    var yamlB64 = btoa(yamlString)
+    
+    done(yamlString, yamlB64)
 }
 
 module.exports = cloudConfig

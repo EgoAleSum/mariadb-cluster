@@ -40,11 +40,15 @@ var nodeSize = function() {
     }
 }
 
-var formSubmit = function(done) {
+var formSubmit = function(done, click) {
     var $form = $('#generator-form')
     $form.submit(function(event) {
         // Prevent submission
         event.preventDefault()
+        
+        if(click) {
+            click()
+        }
         
         // Remove error messages from all groups
         $('.form-group').removeClass('has-error')
