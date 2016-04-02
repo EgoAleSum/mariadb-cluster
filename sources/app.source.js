@@ -4,6 +4,7 @@
 
 var forms = require('./forms.source.js')
 var cloudConfig = require('./cloud-config.source.js')
+var arm = require('./arm.source.js')
 
 $(document).ready(function() {
     // Hide the output panel
@@ -55,12 +56,13 @@ $(document).ready(function() {
         // Generate the cloud-config.yaml file
         cloudConfig(formValues, function(yamlString, yamlB64) {
             // Generate the Azure Resource Manager template if needed
+            var armTemplate = false
             if(formValues.mode == 'arm') {
-                
+                armTemplate = arm(formValues, yamlB64)
             }
-            else {
-                showOutput(false, yamlString, yamlB64)
-            }
+            
+            // Show output
+            showOutput(armTemplate, yamlString, yamlB64)
         })
     }, function() {
         // Disable button on click
