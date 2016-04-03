@@ -4,14 +4,18 @@ var pack = require('./cloud-config.pack.json')
 var yamlSource = require('./yaml.source.js')
 var azureVMSizes = require('./azure-vm-sizes.json')
 
+// URL for the CORS proxy service, to circument the Same-Origin Policy
+// By default we're using the public service by CrossOrigin.me
+// You can grab the source code for the app at https://github.com/technoboy10/crossorigin.me and run your own instance of the CORS proxy, then change the URL below
+var corsProxyUrl = 'https://crossorigin.me/'
+
 // Entry-point for the unit. Generate the cloud-config.yaml file
 var cloudConfig = function(formValues, done) {
     // Check if the etcd2 discovery URL has been passed
     if(!formValues.discoveryUrl) {
         // Need to request discovery url from https://discovery.etcd.io/new?size=X
-        // Use crossorigin.me to circument the Same-Origin Policy
         var nodes = formValues.nodeCount || formValues.etcdNodeCount
-        $.get('https://crossorigin.me/' + 'https://discovery.etcd.io/new?size='+nodes, function(result) {
+        $.get(corsProxyUrl + 'https://discovery.etcd.io/new?size='+nodes, function(result) {
             // result should contain the etcd discovery url
             if(!result || !result.match(/^https\:\/\/discovery\.etcd\.io\/[a-f0-9]{32}$/)) {
                 alert('Invalid response from discovery.etcd.io')
