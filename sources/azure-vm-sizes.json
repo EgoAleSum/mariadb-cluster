@@ -1,0 +1,203 @@
+{
+    "Standard_A0": {
+        "cores": 1,
+        "disks": 1
+    },
+    "Standard_A1": {
+        "cores": 1,
+        "disks": 2
+    },
+    "Standard_A2": {
+        "cores": 2,
+        "disks": 4
+    },
+    "Standard_A3": {
+        "cores": 4,
+        "disks": 8
+    },
+    "Standard_A4": {
+        "cores": 8,
+        "disks": 16
+    },
+    "Standard_A5": {
+        "cores": 2,
+        "disks": 4
+    },
+    "Standard_A6": {
+        "cores": 4,
+        "disks": 8
+    },
+    "Standard_A7": {
+        "cores": 8,
+        "disks": 16
+    },
+    "Standard_A8": {
+        "cores": 8,
+        "disks": 16
+    },
+    "Standard_A9": {
+        "cores": 16,
+        "disks": 16
+    },
+    "Standard_A10": {
+        "cores": 8,
+        "disks": 16
+    },
+    "Standard_A11": {
+        "cores": 16,
+        "disks": 16
+    },
+    "Standard_D1": {
+        "cores": 1,
+        "disks": 2
+    },
+    "Standard_D2": {
+        "cores": 2,
+        "disks": 4
+    },
+    "Standard_D3": {
+        "cores": 4,
+        "disks": 8
+    },
+    "Standard_D4": {
+        "cores": 8,
+        "disks": 16
+    },
+    "Standard_D11": {
+        "cores": 2,
+        "disks": 4
+    },
+    "Standard_D12": {
+        "cores": 4,
+        "disks": 8
+    },
+    "Standard_D13": {
+        "cores": 8,
+        "disks": 16
+    },
+    "Standard_D14": {
+        "cores": 16,
+        "disks": 32
+    },
+    "Standard_D1_v2": {
+        "cores": 1,
+        "disks": 2
+    },
+    "Standard_D2_v2": {
+        "cores": 2,
+        "disks": 4
+    },
+    "Standard_D3_v2": {
+        "cores": 4,
+        "disks": 8
+    },
+    "Standard_D4_v2": {
+        "cores": 8,
+        "disks": 16
+    },
+    "Standard_D5_v2": {
+        "cores": 16,
+        "disks": 32
+    },
+    "Standard_D11_v2": {
+        "cores": 2,
+        "disks": 4
+    },
+    "Standard_D12_v2": {
+        "cores": 4,
+        "disks": 8
+    },
+    "Standard_D13_v2": {
+        "cores": 8,
+        "disks": 16
+    },
+    "Standard_D14_v2": {
+        "cores": 16,
+        "disks": 32
+    },
+    "Standard_DS1": {
+        "cores": 1,
+        "disks": 2,
+        "premiumStorage": true
+    },
+    "Standard_DS2": {
+        "cores": 2,
+        "disks": 4,
+        "premiumStorage": true
+    },
+    "Standard_DS3": {
+        "cores": 4,
+        "disks": 8,
+        "premiumStorage": true
+    },
+    "Standard_DS4": {
+        "cores": 8,
+        "disks": 16,
+        "premiumStorage": true
+    },
+    "Standard_DS11": {
+        "cores": 2,
+        "disks": 4,
+        "premiumStorage": true
+    },
+    "Standard_DS12": {
+        "cores": 4,
+        "disks": 8,
+        "premiumStorage": true
+    },
+    "Standard_DS13": {
+        "cores": 8,
+        "disks": 16,
+        "premiumStorage": true
+    },
+    "Standard_DS14": {
+        "cores": 16,
+        "disks": 32,
+        "premiumStorage": true
+    },
+    "Standard_G1": {
+        "cores": 2,
+        "disks": 4
+    },
+    "Standard_G2": {
+        "cores": 4,
+        "disks": 8
+    },
+    "Standard_G3": {
+        "cores": 8,
+        "disks": 16
+    },
+    "Standard_G4": {
+        "cores": 16,
+        "disks": 32
+    },
+    "Standard_G5": {
+        "cores": 32,
+        "disks": 64
+    },
+    "Standard_GS1": {
+        "cores": 2,
+        "disks": 4,
+        "premiumStorage": true
+    },
+    "Standard_GS2": {
+        "cores": 4,
+        "disks": 8,
+        "premiumStorage": true
+    },
+    "Standard_GS3": {
+        "cores": 8,
+        "disks": 16,
+        "premiumStorage": true
+    },
+    "Standard_GS4": {
+        "cores": 16,
+        "disks": 32,
+        "premiumStorage": true
+    },
+    "Standard_GS5": {
+        "cores": 32,
+        "disks": 64,
+        "premiumStorage": true
+    }
+}

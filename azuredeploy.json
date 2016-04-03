@@ -13,7 +13,7 @@
       "type": "string",
       "maxLength": 8,
       "metadata": {
-        "description": "Name prefix for the storage accounts (must be globally unique)"
+        "description": "Name prefix for the storage accounts"
       }
     },
     "numberOfNodes": {
