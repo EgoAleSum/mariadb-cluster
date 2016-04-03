@@ -12,8 +12,8 @@ The starting point is the generator app, which is a static HTML file that runs i
 **Clone this repository in your local machine, then open the `generator.html` file with a web browser.** Using one of the "evergreen browsers" (Edge, Chrome, Safari, Firefox) is recommended. You will need to be connected to the Internet for the web application to work properly.
 
 The web application offers two modes:
-- *Azure Resource Manager*: in this mode, an ARM template (a JSON document) is generated, ready to be deployed to Azure. The resulting ARM template includes the Cloud Config file too.
-- *Only cloud-config.yaml*: generates only the Cloud Config file, in plaintext and base64-encoded. This file can be used to startup the Galera Cluster on any public/private cloud.
+- **Azure Resource Manager**: in this mode, an ARM template (a JSON document) is generated, ready to be deployed to Azure. The resulting ARM template includes the Cloud Config file too.
+- **Only cloud-config.yaml**: generates only the Cloud Config file, in plaintext and base64-encoded. This file can be used to startup the Galera Cluster on any public/private cloud.
 
 ### Deploying to Azure
 
@@ -62,3 +62,7 @@ Structure of the repository:
 - The entry-point for the JavaScript code is the `app.source.js` file. Using Browserify, Grunt merges all JavaScript code into `app.build.js`.
 - Lastly, Grunt inlines all JavaScript code inside the `generator.html` file using html-build. Please note that certain third-party dependencies, such as jQuery, Bootstrap and highlight.js, are linked externally (over the Internet).
 - Because the `discovery.etcd.io` service doesn't support CORS (see [this issue on GitHub](https://github.com/coreos/discovery.etcd.io/issues/12)), in order for the automatic generation of Discovery URLs to work we need to proxy the request. Without a backend server for the generator app, the best solution is to use a third-party service like [CrossOrigin.me](https://crossorigin.me/). etcd2 Discovery URLs aren't particularly sensitive information, so risks associated with using an external service are minimal. If you're concerned about security, you can deploy your own CORS proxy using the open source CrossOrigin.me code on your own machines, and change the url in the `cloud-config.source.js` file.
+
+## TODO
+
+- [ ] On Azure, deploy data disks to attach to the VM, to store database data
