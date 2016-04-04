@@ -1,6 +1,6 @@
 {
   "itemDisplayName": "MariaDB 10.1 and Galera Cluster with CoreOS and Docker",
-  "description": "Deploy a MySQL-compatible, 3-5 nodes MariaDB cluster (using Galera Cluster), which runs in Docker container on CoreOS hosts. The cluster uses official Docker images for MariaDB 10.1, and the OS and database software update themselves regularly. The cluster is self-healing and can safely tollerate the loss of nodes.",
+  "description": "Do not deploy this template; generate a tailored one using the \"generator.html\" web application instead! Deploy a MySQL-compatible, 3-5 nodes MariaDB cluster (using Galera Cluster), which runs in Docker container on CoreOS hosts. The cluster uses official Docker images for MariaDB 10.1, and the OS and database software update themselves regularly. The cluster is self-healing and can safely tollerate the loss of nodes.",
   "summary": "Self-managing, MySQL-compatible database, with 3-5 MariaDB 10.1 nodes running Galera Cluster inside Docker containers on CoreOS",
   "githubUsername": "EgoAleSum",
   "dateUpdated": "2016-04-03"
