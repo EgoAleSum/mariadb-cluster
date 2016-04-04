@@ -15,9 +15,11 @@ The web application offers two modes:
 - **Azure Resource Manager**: in this mode, an ARM template (a JSON document) is generated, ready to be deployed to Azure. The resulting ARM template includes the Cloud Config file too.
 - **Only cloud-config.yaml**: generates only the Cloud Config file, in plaintext and base64-encoded. This file can be used to startup the Galera Cluster on any public/private cloud.
 
-### Deploying to Azure
+## Deploying to Azure
 
 The ARM template allows you to deploy a MariaDB + Galera Cluster (based on CoreOS) with a few clicks, running on the Microsoft Azure cloud.
+
+### How to deploy the template
 
 1. Ensure you have an active Azure subscription. You can also get a [free trial](http://azure.com/free).
 2. Using the `generator.html` page in your machine, create the Azure Resource Manager template, properly configured.
@@ -26,6 +28,39 @@ The ARM template allows you to deploy a MariaDB + Galera Cluster (based on CoreO
 5. In the "Parameters" blade, leave all values to their default (the JSON you pasted has all your parameters already hardcoded as default values).
 6. Select the subscription you want to deploy the cluster into, then create a new Resource Group (or choose an existing one) and pick in what Azure region you want the deployment to happen. Lastly, accept the mandatory legal terms and press Create.
 7. Azure will deploy your VMs and linked resources, and then MariaDB and Galera Cluster will be started in all the VMs automatically. The entire process should last **approximately 5 minutes**.
+
+### Architecture of deployment on Azure
+
+On the Microsoft Azure platform, the JSON template is deploying the following:
+
+![Architecture of deployment on Azure](azure-architecture.png)
+
+1. A Virtual Network named after the Resource Group (not in the diagram) with address space `10.0.0.0/16`.
+2. A subnet `10.0.1.0/24` named `mariadb-subnet`.
+3. An Azure Internal Load Balancer for the MySQL endpoints (port `3306`). The Internal Load Balancer has always the address `10.0.1.4` and no public IP.
+4. The 3 or 5 nodes running the application. All VMs are named `mariadb-node-N` (where N is a number between 0 and 4), with addresses automatically assigned by DHCP (generally, the first one to deploy obtains `10.0.1.5`, and the others follow in sequence). Nodes do not have a public IP, and Network Security Group rules allow traffic to only port `3306` (MySQL) and `22` (SSH), and only from within the Virtual Network. All VMs are also deployed in an Availability Set, in order to achieve high availability.
+
+Your application can connect to the MariaDB Galera Cluster on the IP `10.0.1.4` (Internal Load Balancer) on port `3306`. Using Network Security Group rules, connections are allowed only from within the Virtual Network. In case you need to administer the VMs using SSH, you can do so by connecting to each instance on port `22`, from machines inside the Virtual Network, and authenticating using the public key method.
+
+The default password for the `root` user in the database is **`my-secret-pw`**; it's recommended to change it as soon as possible, using the following SQL statement:
+
+````sql
+SET PASSWORD FOR 'root'@'%' = PASSWORD('newpass');
+````
+
+
+## Using the Cloud Config mode
+
+If you use the "Cloud Config mode", the generator app will create only a `cloud-config.yaml` file (in plaintext and base64-encoded). You can use that file to spin up your own cluster, in any public or private cloud.
+
+There are only a few restrictions to keep in mind when designing your architecture:
+1. The `cloud-config.yaml` file generated is meant to be used with CoreOS 899+ (latest Stable release as of writing); it has not been tested with any other distribution, and it's likely not to work.
+2. Your nodes must be named `mariadb-node-0`, `mariadb-node-1`, etc, up to `mariadb-node-4`. All VMs in the cluster must be able to connect to each other using those names, so you need to ensure that a naming resolution service exists in your infrastructure. Indeed, in the current version, the MariaDB configuration file has hardcoded the hostnames of the VMs; this design choice may change in the future, however.
+3. It's strongly advised to use an odd number of nodes to avoid the risk of "split-brain conditions" (please see the [official Galera documentation](http://galeracluster.com/documentation-webpages/weightedquorum.html)).
+4. The default password for the `root` user in the database is **`my-secret-pw`**; it's recommended to change it as soon as possible.
+
+
+## Notes on parameters for the generator
 
 ### etcd2 Discovery URL
 
@@ -62,6 +97,7 @@ Structure of the repository:
 - The entry-point for the JavaScript code is the `app.source.js` file. Using Browserify, Grunt merges all JavaScript code into `app.build.js`.
 - Lastly, Grunt inlines all JavaScript code inside the `generator.html` file using html-build. Please note that certain third-party dependencies, such as jQuery, Bootstrap and highlight.js, are linked externally (over the Internet).
 - Because the `discovery.etcd.io` service doesn't support CORS (see [this issue on GitHub](https://github.com/coreos/discovery.etcd.io/issues/12)), in order for the automatic generation of Discovery URLs to work we need to proxy the request. Without a backend server for the generator app, the best solution is to use a third-party service like [CrossOrigin.me](https://crossorigin.me/). etcd2 Discovery URLs aren't particularly sensitive information, so risks associated with using an external service are minimal. If you're concerned about security, you can deploy your own CORS proxy using the open source CrossOrigin.me code on your own machines, and change the url in the `cloud-config.source.js` file.
+
 
 ## TODO
 
