@@ -11,7 +11,7 @@
     },
     "storageAccountNamePrefix": {
       "type": "string",
-      "maxLength": 8,
+      "maxLength": 7,
       "metadata": {
         "description": "Name prefix for the storage accounts"
       }
@@ -56,9 +56,9 @@
     "osImageSku": "Stable",
     "nicNamePrefix": "mariadb-nic-",
     "availabilitySetName": "mariadb-as",
-    "vhdStorageAccountName": "[toLower( concat( parameters('storageAccountNamePrefix'), 'vhd', uniqueString(resourceGroup().id) ) )]",
+    "vhdStorageAccountName": "[toLower( concat( parameters('storageAccountNamePrefix'), 'vhd0', uniqueString(resourceGroup().id) ) )]",
     "vhdStorageAccountType": "Standard_LRS",
-    "diagStorageAccountName": "[toLower( concat( parameters('storageAccountNamePrefix'), 'dgn', uniqueString(resourceGroup().id) ) )]",
+    "diagStorageAccountName": "[toLower( concat( parameters('storageAccountNamePrefix'), 'diag', uniqueString(resourceGroup().id) ) )]",
     "diagStorageAccountType": "Standard_LRS",
     "sshKeyPath": "[concat('/home/', parameters('adminUsername'),'/.ssh/authorized_keys')]",
     "loadBalancerIp": "10.0.1.4",

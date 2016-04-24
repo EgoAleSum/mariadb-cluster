@@ -79,7 +79,7 @@ var formSubmit = function(done, click) {
             // Storage account name prefix
             var $storageAccountPrefix = $('#storage-account-prefix', $form)
             formValues.storageAccountPrefix = ($storageAccountPrefix.val() + '').trim()
-            if(!formValues.storageAccountPrefix.match(/^[0-9a-z]{1,8}$/)) {
+            if(!formValues.storageAccountPrefix.match(/^[0-9a-z]{1,7}$/)) {
                 $storageAccountPrefix.parents('.form-group').addClass('has-error')
                 return false
             }

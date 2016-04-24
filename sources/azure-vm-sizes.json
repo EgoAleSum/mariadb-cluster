@@ -1,8 +1,4 @@
 {
-    "Standard_A0": {
-        "cores": 1,
-        "disks": 1
-    },
     "Standard_A1": {
         "cores": 1,
         "disks": 2
