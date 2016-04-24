@@ -11,7 +11,7 @@
     "grunt-browserify": "^5.0.0",
     "grunt-contrib-watch": "^1.0.0",
     "grunt-html-build": "^0.5.3",
-    "js-yaml": "^3.5.0",
+    "js-yaml": "^3.6.0",
     "mz": "^2.4.0"
   }
 }

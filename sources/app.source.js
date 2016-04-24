@@ -20,7 +20,7 @@ $(document).ready(function() {
     forms.prepareFormMode()
     forms.setFormMode('arm')
     
-    // Populate all node sizes in the select
+    // Populate all node sizes in the select and bind action to change event to populate data disk select
     forms.nodeSize()
     
     // Callback to show output
