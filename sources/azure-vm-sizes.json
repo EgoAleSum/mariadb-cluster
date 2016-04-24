@@ -111,6 +111,10 @@
         "cores": 16,
         "disks": 32
     },
+    "Standard_D15_v2": {
+        "cores": 20,
+        "disks": 40
+    },
     "Standard_DS1": {
         "cores": 1,
         "disks": 2,
