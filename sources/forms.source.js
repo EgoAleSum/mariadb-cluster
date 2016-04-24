@@ -46,10 +46,6 @@ var formSubmit = function(done, click) {
         // Prevent submission
         event.preventDefault()
         
-        if(click) {
-            click()
-        }
-        
         // Remove error messages from all groups
         $('.form-group').removeClass('has-error')
         
@@ -128,6 +124,11 @@ var formSubmit = function(done, click) {
         else if(!formValues.discoveryUrl.match(/^https\:\/\/discovery\.etcd\.io\/[a-f0-9]{32}$/)) {
             $discoveryUrl.parents('.form-group').addClass('has-error')
             return false
+        }
+        
+        // Invoke click callback if necessary
+        if(click) {
+            click()
         }
         
         // Invoke callback
