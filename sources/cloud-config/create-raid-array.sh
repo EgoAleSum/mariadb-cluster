@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # List disks that need to be formatted
-#lsblk | awk '/^sd/ { a[$1] = 1 } /^.-/ { sub(/[`|]-/, "", $1) ; sub(/[0-9]/, "", $1) ; a[$1] = 0 } END { for(x in a) { if(a[x]) { print x }} } '
-
 DISKS=$(lsblk | awk '/^sd/ { a[$1] = 1 } /^.-/ { sub(/[`|]-/, "", $1) ; sub(/[0-9]/, "", $1) ; a[$1] = 0 } END { for(x in a) { if(a[x]) { print x }} } ')
 COUNT=$(echo $DISKS | wc -w)
 
