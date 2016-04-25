@@ -1,0 +1,14 @@
+[Unit]
+Description=Mount RAID array in /mnt/data
+
+Requires=create-raid-array.service
+After=create-raid-array.service
+Before=docker-mariadb-galera.service
+
+[Mount]
+What=/dev/md0
+Where=/mnt/data
+Type=ext4
+
+[Install]
+RequiredBy=docker-mariadb-galera.service

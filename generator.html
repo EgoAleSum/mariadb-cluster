@@ -807,12 +807,13 @@ module.exports={
     }
 }
 },{}],5:[function(require,module,exports){
-module.exports={"docker-mariadb-galera.service":"[Unit]\nDescription=MariaDB with Galera Cluster\n\nRequires=docker.service\nWants=network-online.target\nAfter=docker.service network-online.target\n\n[Service]\nRestart=always\nRestartSec=3\nTimeoutStartSec=0\n\nExecStartPre=/usr/bin/chmod +x /opt/bin/docker-mariadb-galera.sh\nExecStart=/opt/bin/docker-mariadb-galera.sh\n\nExecStop=/bin/bash -c \" \\\n  HOSTNAME=$(/bin/hostname) \\\n  HOSTNUM=$(/bin/expr $HOSTNAME : '.*\\\\([0-9]\\\\)') \\\n  /usr/bin/docker stop mariadb-container-$HOSTNUM || true \\\n  /usr/bin/docker rm mariadb-container-$HOSTNUM || true \\\n\"\n\n[Install]\nWantedBy=multi-user.target\n","docker-mariadb-galera.sh":"#!/bin/sh\n\n# Parameters\nDATA_DIR=\"/data\"\nIMAGE_NAME=\"mariadb:10.1\"\n\n# Get the hostname of the VM\nHOSTNAME=$(hostname)\n\n# Get the ID of the VM from the hostname (single-digit)\nHOSTNUM=$(expr \"$HOSTNAME\" : '.*\\([0-9]\\)')\n\n# Get the IP of the eth0 interface\nHOSTIP=$(ip -4 addr ls eth0 | awk '/inet / {print $2}' | cut -d\"/\" -f1)\n\n# Ensure the folder for MariaDB exists\nmkdir -p $DATA_DIR\n\n# Remove pre-existing containers\ndocker kill mariadb-container-$HOSTNUM || true\ndocker rm mariadb-container-$HOSTNUM || true\n\n# Pull the latest version of the Docker image\ndocker pull $IMAGE_NAME\n\n# Check if the cluster is marked as initialized\ncurl --silent --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized > /dev/null\nif [ $? -ne 0 ]; then\n    echo \"Cluster needs to be initialized\"\n    \n    # Check if this is the first VM (hostname ends in \"node-0\") that will initialize the cluster\n    if [[ \"$HOSTNAME\" == *node-0 ]]; then\n        echo \"VM $HOSTNAME is the first node ($HOSTIP)\"\n        \n        # Start the Docker container\n        echo \"Starting Docker container (first node)\"\n        \n        docker run \\\n          --name mariadb-container-$HOSTNUM \\\n          -v /opt/mysql.conf.d:/etc/mysql/conf.d \\\n          -v $DATA_DIR:/var/lib/mysql \\\n          -e MYSQL_INITDB_SKIP_TZINFO=yes \\\n          -e MYSQL_ROOT_PASSWORD=my-secret-pw \\\n          -p 3306:3306 \\\n          -p 4567:4567/udp \\\n          -p 4567-4568:4567-4568 \\\n          -p 4444:4444 \\\n          $IMAGE_NAME \\\n          --wsrep-new-cluster \\\n          --wsrep_node_address=$HOSTIP\n    else\n        echo \"This is not the first node: $HOSTNAME ($HOSTIP)\"\n        \n        # Wait for the cluster to be initialized\n        until curl --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized; do\n          echo \"Waiting for initialization...\"\n          sleep 2\n        done\n        \n        # Touch the mysql data folder so the database is not re-initialized\n        mkdir -p $DATA_DIR/mysql\n        \n        # Start container\n        echo \"Starting Docker container\"\n        docker run \\\n          --name mariadb-container-$HOSTNUM \\\n          -v /opt/mysql.conf.d:/etc/mysql/conf.d \\\n          -v $DATA_DIR:/var/lib/mysql \\\n          -p 3306:3306 \\\n          -p 4567:4567/udp \\\n          -p 4567-4568:4567-4568 \\\n          -p 4444:4444 \\\n          $IMAGE_NAME \\\n          --wsrep_node_address=$HOSTIP\n    fi\nelse\n    echo \"Cluster is already initialized. Node: $HOSTNAME ($HOSTIP)\"\n    \n    echo \"Starting Docker container\"\n    docker run \\\n      --name mariadb-container-$HOSTNUM \\\n      -v /opt/mysql.conf.d:/etc/mysql/conf.d \\\n      -v $DATA_DIR:/var/lib/mysql \\\n      -p 3306:3306 \\\n      -p 4567:4567/udp \\\n      -p 4567-4568:4567-4568 \\\n      -p 4444:4444 \\\n      $IMAGE_NAME \\\n      --wsrep_node_address=$HOSTIP\nfi\n","docker-mariadb-waiter.service":"[Unit]\nDescription=Wait for MariaDB to be initialized, then update status in etcd\n\nRequires=docker.service docker-mariadb-galera.service\nWants=network-online.target\nAfter=docker.service docker-mariadb-galera.service network-online.target\n\n[Service]\nType=simple\nRemainAfterExit=true\nExecStartPre=/usr/bin/chmod +x /opt/bin/docker-mariadb-waiter.sh\nExecStart=/usr/bin/bash /opt/bin/docker-mariadb-waiter.sh\n\n[Install]\nWantedBy=multi-user.target\n","docker-mariadb-waiter.sh":"#!/bin/sh\n\n# This script updates the status in etcd only after MariaDB is actually initialized and ready to accept connections\n\n# Parameters\nIMAGE_NAME=\"mariadb:10.1\"\n\n# Check if the cluster is marked as initialized. If it's already initialized, then just exit successfully\ncurl --silent --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized > /dev/null\nif [ $? -ne 0 ]; then\n    sleep 10\n    \n    while ! docker run --rm $IMAGE_NAME mysqladmin ping -h mariadb-node-0 --silent; do\n        sleep 5\n    done\n    \n    # Wait 5 more seconds before sending the green light\n    sleep 5\n    \n    # Server is ready: other nodes can now connect\n    curl -L http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized -XPUT -d value=\"true\"\nfi\n","etcd-waiter.service":"[Unit]\nDescription=Wait for etcd2 to be online\n\nWants=network-online.target etcd2.service\nAfter=network-online.target etcd2.service\nRequiredBy=docker.service\nBefore=docker.service fleet.service\n\n[Service]\nType=oneshot\nRemainAfterExit=true\nExecStartPre=/usr/bin/chmod +x /opt/bin/etcd-waiter.sh\nExecStart=/usr/bin/bash /opt/bin/etcd-waiter.sh\n","etcd-waiter.sh":"#! /usr/bin/bash\nuntil curl http://127.0.0.1:4001/v2/machines; do sleep 2; done\n","mysql_server.cnf":"[server]\nbind-address=0.0.0.0\nbinlog_format=row\ndefault_storage_engine=InnoDB\ninnodb_autoinc_lock_mode=2\ninnodb_locks_unsafe_for_binlog=1\nquery_cache_size=0\nquery_cache_type=0\n\n[galera]\nwsrep_on=ON\nwsrep_provider=\"/usr/lib/galera/libgalera_smm.so\"\nwsrep_cluster_address=\"gcomm://mariadb-node-0,mariadb-node-1,mariadb-node-2,mariadb-node-3,mariadb-node-4\"\nwsrep-sst-method=rsync\n\n# Optional setting\nwsrep_slave_threads={WSREP_SLAVE_THREADS}\n#innodb_flush_log_at_trx_commit=0\n"}
+module.exports={"create-raid-array.service":"[Unit]\nDescription=Create RAID array on data disks\n\nBefore=mnt-data.mount\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/bash /opt/bin/create-raid-array.sh\n\n[Install]\nWantedBy=multi-user.target\nRequiredBy=mnt-data.mount\n","create-raid-array.sh":"#!/bin/bash\n\n# List disks that need to be formatted\n#lsblk | awk '/^sd/ { a[$1] = 1 } /^.-/ { sub(/[`|]-/, \"\", $1) ; sub(/[0-9]/, \"\", $1) ; a[$1] = 0 } END { for(x in a) { if(a[x]) { print x }} } '\n\nDISKS=$(lsblk | awk '/^sd/ { a[$1] = 1 } /^.-/ { sub(/[`|]-/, \"\", $1) ; sub(/[0-9]/, \"\", $1) ; a[$1] = 0 } END { for(x in a) { if(a[x]) { print x }} } ')\nCOUNT=$(echo $DISKS | wc -w)\n\n# Format all disks\nfor i in $DISKS; do\necho \"n\np\n1\n\n\nt\nfd\nw\n\" | fdisk \"/dev/$i\"; done\n\n# Create the raid array md0\nPARTITIONS=\"\"\nfor i in $DISKS; do\n    PARTITIONS+=\"/dev/${i}1 \"\ndone\nmdadm --create /dev/md0 --level 0 --raid-devices $COUNT $PARTITIONS\n\n# Crete an ext4 partition on md0\nmkfs -t ext4 /dev/md0\n","docker-mariadb-galera.service":"[Unit]\nDescription=MariaDB with Galera Cluster\n\nRequires=docker.service\nWants=network-online.target\nAfter=docker.service network-online.target\n\n[Service]\nRestart=always\nRestartSec=3\nTimeoutStartSec=0\n\nExecStartPre=/usr/bin/chmod +x /opt/bin/docker-mariadb-galera.sh\nExecStart=/opt/bin/docker-mariadb-galera.sh\n\nExecStop=/bin/bash -c \" \\\n  HOSTNAME=$(/bin/hostname) \\\n  HOSTNUM=$(/bin/expr $HOSTNAME : '.*\\\\([0-9]\\\\)') \\\n  /usr/bin/docker stop mariadb-container-$HOSTNUM || true \\\n  /usr/bin/docker rm mariadb-container-$HOSTNUM || true \\\n\"\n\n[Install]\nWantedBy=multi-user.target\n","docker-mariadb-galera.sh":"#!/bin/sh\n\n# Parameters\nDATA_DIR=\"/mnt/data\"\nIMAGE_NAME=\"mariadb:10.1\"\n\n# Get the hostname of the VM\nHOSTNAME=$(hostname)\n\n# Get the ID of the VM from the hostname (single-digit)\nHOSTNUM=$(expr \"$HOSTNAME\" : '.*\\([0-9]\\)')\n\n# Get the IP of the eth0 interface\nHOSTIP=$(ip -4 addr ls eth0 | awk '/inet / {print $2}' | cut -d\"/\" -f1)\n\n# Ensure the folder for MariaDB exists\nmkdir -p $DATA_DIR\n\n# Remove pre-existing containers\ndocker kill mariadb-container-$HOSTNUM || true\ndocker rm mariadb-container-$HOSTNUM || true\n\n# Pull the latest version of the Docker image\ndocker pull $IMAGE_NAME\n\n# Check if the cluster is marked as initialized\ncurl --silent --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized > /dev/null\nif [ $? -ne 0 ]; then\n    echo \"Cluster needs to be initialized\"\n    \n    # Check if this is the first VM (hostname ends in \"node-0\") that will initialize the cluster\n    if [[ \"$HOSTNAME\" == *node-0 ]]; then\n        echo \"VM $HOSTNAME is the first node ($HOSTIP)\"\n        \n        # Start the Docker container\n        echo \"Starting Docker container (first node)\"\n        \n        docker run \\\n          --name mariadb-container-$HOSTNUM \\\n          -v /opt/mysql.conf.d:/etc/mysql/conf.d \\\n          -v $DATA_DIR:/var/lib/mysql \\\n          -e MYSQL_INITDB_SKIP_TZINFO=yes \\\n          -e MYSQL_ROOT_PASSWORD=my-secret-pw \\\n          -p 3306:3306 \\\n          -p 4567:4567/udp \\\n          -p 4567-4568:4567-4568 \\\n          -p 4444:4444 \\\n          $IMAGE_NAME \\\n          --wsrep-new-cluster \\\n          --wsrep_node_address=$HOSTIP\n    else\n        echo \"This is not the first node: $HOSTNAME ($HOSTIP)\"\n        \n        # Wait for the cluster to be initialized\n        until curl --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized; do\n          echo \"Waiting for initialization...\"\n          sleep 2\n        done\n        \n        # Touch the mysql data folder so the database is not re-initialized\n        mkdir -p $DATA_DIR/mysql\n        \n        # Start container\n        echo \"Starting Docker container\"\n        docker run \\\n          --name mariadb-container-$HOSTNUM \\\n          -v /opt/mysql.conf.d:/etc/mysql/conf.d \\\n          -v $DATA_DIR:/var/lib/mysql \\\n          -p 3306:3306 \\\n          -p 4567:4567/udp \\\n          -p 4567-4568:4567-4568 \\\n          -p 4444:4444 \\\n          $IMAGE_NAME \\\n          --wsrep_node_address=$HOSTIP\n    fi\nelse\n    echo \"Cluster is already initialized. Node: $HOSTNAME ($HOSTIP)\"\n    \n    echo \"Starting Docker container\"\n    docker run \\\n      --name mariadb-container-$HOSTNUM \\\n      -v /opt/mysql.conf.d:/etc/mysql/conf.d \\\n      -v $DATA_DIR:/var/lib/mysql \\\n      -p 3306:3306 \\\n      -p 4567:4567/udp \\\n      -p 4567-4568:4567-4568 \\\n      -p 4444:4444 \\\n      $IMAGE_NAME \\\n      --wsrep_node_address=$HOSTIP\nfi\n","docker-mariadb-waiter.service":"[Unit]\nDescription=Wait for MariaDB to be initialized, then update status in etcd\n\nRequires=docker.service docker-mariadb-galera.service\nWants=network-online.target\nAfter=docker.service docker-mariadb-galera.service network-online.target\n\n[Service]\nType=simple\nRemainAfterExit=true\nExecStartPre=/usr/bin/chmod +x /opt/bin/docker-mariadb-waiter.sh\nExecStart=/usr/bin/bash /opt/bin/docker-mariadb-waiter.sh\n\n[Install]\nWantedBy=multi-user.target\n","docker-mariadb-waiter.sh":"#!/bin/sh\n\n# This script updates the status in etcd only after MariaDB is actually initialized and ready to accept connections\n\n# Parameters\nIMAGE_NAME=\"mariadb:10.1\"\n\n# Check if the cluster is marked as initialized. If it's already initialized, then just exit successfully\ncurl --silent --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized > /dev/null\nif [ $? -ne 0 ]; then\n    sleep 10\n    \n    while ! docker run --rm $IMAGE_NAME mysqladmin ping -h mariadb-node-0 --silent; do\n        sleep 5\n    done\n    \n    # Wait 5 more seconds before sending the green light\n    sleep 5\n    \n    # Server is ready: other nodes can now connect\n    curl -L http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized -XPUT -d value=\"true\"\nfi\n","etcd-waiter.service":"[Unit]\nDescription=Wait for etcd2 to be online\n\nWants=network-online.target etcd2.service\nAfter=network-online.target etcd2.service\nBefore=docker.service fleet.service\n\n[Service]\nType=oneshot\nRemainAfterExit=true\nExecStartPre=/usr/bin/chmod +x /opt/bin/etcd-waiter.sh\nExecStart=/usr/bin/bash /opt/bin/etcd-waiter.sh\n\n[Install]\nRequiredBy=docker.service\n","etcd-waiter.sh":"#! /usr/bin/bash\nuntil curl http://127.0.0.1:4001/v2/machines; do sleep 2; done\n","mnt-data.mount":"[Unit]\nDescription=Mount RAID array in /mnt/data\n\nRequires=create-raid-array.service\nAfter=create-raid-array.service\nBefore=docker-mariadb-galera.service\n\n[Mount]\nWhat=/dev/md0\nWhere=/mnt/data\nType=ext4\n\n[Install]\nRequiredBy=docker-mariadb-galera.service\n","mysql_server.cnf":"[server]\nbind-address=0.0.0.0\nbinlog_format=row\ndefault_storage_engine=InnoDB\ninnodb_autoinc_lock_mode=2\ninnodb_locks_unsafe_for_binlog=1\nquery_cache_size=0\nquery_cache_type=0\n\n[galera]\nwsrep_on=ON\nwsrep_provider=\"/usr/lib/galera/libgalera_smm.so\"\nwsrep_cluster_address=\"gcomm://mariadb-node-0,mariadb-node-1,mariadb-node-2,mariadb-node-3,mariadb-node-4\"\nwsrep-sst-method=rsync\n\n# Optional setting\nwsrep_slave_threads={WSREP_SLAVE_THREADS}\n#innodb_flush_log_at_trx_commit=0\n"}
 },{}],6:[function(require,module,exports){
 'use strict'
 
 var pack = require('./cloud-config.pack.json')
 var yamlSource = require('./yaml.source.js')
+var yamlARMSource = require('./yaml-arm.source.js')
 var azureVMSizes = require('./azure-vm-sizes.json')
 
 // URL for the CORS proxy service, to circument the Same-Origin Policy
@@ -845,9 +846,12 @@ var cloudConfig = function(formValues, done) {
 }
 
 // Build the cloud-config.yaml file
-var buildYaml = function(formValues, done) {    
+var buildYaml = function(formValues, done) {
+    // Select the proper template
+    var template = (formValues.mode == 'arm') ? yamlARMSource : yamlSource
+    
     // Create the tree
-    var yamlTree = Object.assign({}, yamlSource.tree)
+    var yamlTree = Object.assign({}, template.tree)
     
     // etcd2 discovery url
     yamlTree.coreos.etcd2.discovery = formValues.discoveryUrl
@@ -865,9 +869,9 @@ var buildYaml = function(formValues, done) {
     }
     
     // Read files to be created and append the data to the yaml tree
-    for(var k in yamlSource.readFiles) {
-        if(yamlSource.readFiles.hasOwnProperty(k)) {
-            var push = Object.assign({}, yamlSource.readFiles[k]) // Clone the object
+    for(var k in template.readFiles) {
+        if(template.readFiles.hasOwnProperty(k)) {
+            var push = Object.assign({}, template.readFiles[k]) // Clone the object
             push.content = pack[k]
             
             if(k == 'mysql_server.cnf') {
@@ -879,8 +883,8 @@ var buildYaml = function(formValues, done) {
     }
     
     // systemd units
-    for(var i = 0, len = yamlSource.units.length; i < len; i++) {
-        var unit = yamlSource.units[i]
+    for(var i = 0, len = template.units.length; i < len; i++) {
+        var unit = template.units[i]
         
         var push = Object.assign({}, unit) // Clone the object
         delete push.source
@@ -915,7 +919,7 @@ var buildYaml = function(formValues, done) {
 
 module.exports = cloudConfig
 
-},{"./azure-vm-sizes.json":4,"./cloud-config.pack.json":5,"./yaml.source.js":10}],7:[function(require,module,exports){
+},{"./azure-vm-sizes.json":4,"./cloud-config.pack.json":5,"./yaml-arm.source.js":10,"./yaml.source.js":11}],7:[function(require,module,exports){
 module.exports={
 	"name": "DataDisk*",
 	"diskSizeGB": "1023",
@@ -1131,6 +1135,70 @@ module.exports={
 	}
 }
 },{}],10:[function(require,module,exports){
+'use strict'
+
+// Source for the cloud-config.yaml file
+module.exports = {
+    // JSON structure for the cloud-config.yaml file
+    tree: {
+        "write_files": [],
+        "coreos": {
+            "update": {
+                "reboot-strategy": "etcd-lock"
+            },
+            "etcd2": {
+                "discovery": false,
+                "advertise-client-urls": "http://$private_ipv4:2379,http://$private_ipv4:4001",
+                "initial-advertise-peer-urls": "http://$private_ipv4:2380",
+                "listen-client-urls": "http://0.0.0.0:2379,http://0.0.0.0:4001",
+                "listen-peer-urls": "http://$private_ipv4:2380"
+            },
+            "units": []
+        }
+    },
+
+    // List of files for write_files
+    readFiles: {
+        'docker-mariadb-galera.sh': {
+            'path': '/opt/bin/docker-mariadb-galera.sh',
+            'owner': 'root',
+            'permissions': '0755'
+        },
+        'docker-mariadb-waiter.sh': {
+            'path': '/opt/bin/docker-mariadb-waiter.sh',
+            'owner': 'root',
+            'permissions': '0755'
+        },
+        'etcd-waiter.sh': {
+            'path': '/opt/bin/etcd-waiter.sh',
+            'owner': 'root',
+            'permissions': '0755'
+        },
+        'mysql_server.cnf': {
+            'path': '/opt/mysql.conf.d/mysql_server.cnf',
+            'owner': 'root',
+            'permissions': '0644'
+        },
+        'create-raid-array.sh': {
+            'path': '/opt/bin/create-raid-array.sh',
+            'owner': 'root',
+            'permissions': '0755'
+        },
+    },
+
+    // List of systemd units
+    units: [
+        { 'name': 'docker.service', 'command': 'start' },
+        { 'name': 'etcd2.service', 'command': 'start' },
+        { 'name': 'docker-mariadb-galera.service', 'command': 'start', 'source': 'docker-mariadb-galera.service' },
+        { 'name': 'docker-mariadb-waiter.service', 'command': 'start', 'source': 'docker-mariadb-waiter.service' },
+        { 'name': 'etcd-waiter.service', 'command': 'start', 'source': 'etcd-waiter.service' },
+        { 'name': 'create-raid-array.service', 'command': 'start', 'source': 'create-raid-array.service' },
+        { 'name': 'mnt-data.mount', 'command': 'start', 'source': 'mnt-data.mount' },
+    ]
+}
+
+},{}],11:[function(require,module,exports){
 'use strict'
 
 // Source for the cloud-config.yaml file

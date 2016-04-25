@@ -2,6 +2,7 @@
 
 var pack = require('./cloud-config.pack.json')
 var yamlSource = require('./yaml.source.js')
+var yamlARMSource = require('./yaml-arm.source.js')
 var azureVMSizes = require('./azure-vm-sizes.json')
 
 // URL for the CORS proxy service, to circument the Same-Origin Policy
@@ -34,9 +35,12 @@ var cloudConfig = function(formValues, done) {
 }
 
 // Build the cloud-config.yaml file
-var buildYaml = function(formValues, done) {    
+var buildYaml = function(formValues, done) {
+    // Select the proper template
+    var template = (formValues.mode == 'arm') ? yamlARMSource : yamlSource
+    
     // Create the tree
-    var yamlTree = Object.assign({}, yamlSource.tree)
+    var yamlTree = Object.assign({}, template.tree)
     
     // etcd2 discovery url
     yamlTree.coreos.etcd2.discovery = formValues.discoveryUrl
@@ -54,9 +58,9 @@ var buildYaml = function(formValues, done) {
     }
     
     // Read files to be created and append the data to the yaml tree
-    for(var k in yamlSource.readFiles) {
-        if(yamlSource.readFiles.hasOwnProperty(k)) {
-            var push = Object.assign({}, yamlSource.readFiles[k]) // Clone the object
+    for(var k in template.readFiles) {
+        if(template.readFiles.hasOwnProperty(k)) {
+            var push = Object.assign({}, template.readFiles[k]) // Clone the object
             push.content = pack[k]
             
             if(k == 'mysql_server.cnf') {
@@ -68,8 +72,8 @@ var buildYaml = function(formValues, done) {
     }
     
     // systemd units
-    for(var i = 0, len = yamlSource.units.length; i < len; i++) {
-        var unit = yamlSource.units[i]
+    for(var i = 0, len = template.units.length; i < len; i++) {
+        var unit = template.units[i]
         
         var push = Object.assign({}, unit) // Clone the object
         delete push.source
