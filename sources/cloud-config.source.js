@@ -16,7 +16,7 @@ var cloudConfig = function(formValues, done) {
     if(!formValues.discoveryUrl) {
         // Need to request discovery url from https://discovery.etcd.io/new?size=X
         var nodes = formValues.nodeCount || formValues.etcdNodeCount
-        $.get(corsProxyUrl + 'https://discovery.etcd.io/new?size='+nodes, function(result) {
+        $.get(corsProxyUrl + 'https://discovery.etcd.io/new?size='+nodes+'&_='+Date.now(), function(result) {
             // result should contain the etcd discovery url
             if(!result || !result.match(/^https\:\/\/discovery\.etcd\.io\/[a-f0-9]{32}$/)) {
                 alert('Invalid response from discovery.etcd.io')

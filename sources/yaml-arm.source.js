@@ -51,12 +51,13 @@ module.exports = {
 
     // List of systemd units
     units: [
+        { 'name': 'etcd.service', 'command': 'stop', 'mask': true },
         { 'name': 'docker.service', 'command': 'start' },
         { 'name': 'etcd2.service', 'command': 'start' },
         { 'name': 'docker-mariadb-galera.service', 'command': 'start', 'source': 'docker-mariadb-galera.service' },
         { 'name': 'docker-mariadb-waiter.service', 'command': 'start', 'source': 'docker-mariadb-waiter.service' },
-        { 'name': 'etcd-waiter.service', 'command': 'start', 'source': 'etcd-waiter.service' },
-        { 'name': 'create-raid-array.service', 'command': 'start', 'source': 'create-raid-array.service' },
-        { 'name': 'mnt-data.mount', 'command': 'start', 'source': 'mnt-data.mount' },
+        { 'name': 'etcd-waiter.service', 'command': 'start', 'source': 'etcd-waiter.service', 'enable': true },
+        { 'name': 'create-raid-array.service', 'command': 'start', 'source': 'create-raid-array.service', 'enable': true },
+        { 'name': 'mnt-data.mount', 'command': 'start', 'source': 'mnt-data.mount', 'enable': true },
     ]
 }

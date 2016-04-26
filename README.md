@@ -102,3 +102,4 @@ Structure of the repository:
 ## TODO
 
 - [ ] Switch WSREP engine from rsync to xtrabackup (see https://github.com/docker-library/mariadb/pull/47)
+- [ ] Enable iptables (see https://www.jimmycuadra.com/posts/securing-coreos-with-iptables/)
