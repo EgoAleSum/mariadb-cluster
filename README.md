@@ -27,7 +27,7 @@ The ARM template allows you to deploy a MariaDB + Galera Cluster (based on CoreO
 4. In the "Template" blade, paste the "Azure Resource Manager template" JSON document generated with the HTML app.
 5. In the "Parameters" blade, leave all values to their default (the JSON you pasted has all your parameters already hardcoded as default values).
 6. Select the subscription you want to deploy the cluster into, then create a new Resource Group (or choose an existing one) and pick in what Azure region you want the deployment to happen. Lastly, accept the mandatory legal terms and press Create.
-7. Azure will deploy your VMs and linked resources, and then MariaDB and Galera Cluster will be started in all the VMs automatically. The entire process should last **approximately 5 minutes**.
+7. Azure will deploy your VMs and linked resources, and then MariaDB and Galera Cluster will be started in all the VMs automatically. The duration of the setup depends a lot on the size of the attached disks; with small disks (2-4), it should last around 5 minutes.
 
 ### Architecture of deployment on Azure
 
