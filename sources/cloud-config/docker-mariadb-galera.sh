@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Parameters
-DATA_DIR="/data"
+DATA_DIR="/mnt/data"
 IMAGE_NAME="mariadb:10.1"
 
 # Get the hostname of the VM

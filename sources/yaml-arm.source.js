@@ -41,7 +41,12 @@ module.exports = {
             'path': '/opt/mysql.conf.d/mysql_server.cnf',
             'owner': 'root',
             'permissions': '0644'
-        }
+        },
+        'create-raid-array.sh': {
+            'path': '/opt/bin/create-raid-array.sh',
+            'owner': 'root',
+            'permissions': '0755'
+        },
     },
 
     // List of systemd units
@@ -52,5 +57,7 @@ module.exports = {
         { 'name': 'docker-mariadb-galera.service', 'command': 'start', 'source': 'docker-mariadb-galera.service' },
         { 'name': 'docker-mariadb-waiter.service', 'command': 'start', 'source': 'docker-mariadb-waiter.service' },
         { 'name': 'etcd-waiter.service', 'command': 'start', 'source': 'etcd-waiter.service', 'enable': true },
+        { 'name': 'create-raid-array.service', 'command': 'start', 'source': 'create-raid-array.service', 'enable': true },
+        { 'name': 'mnt-data.mount', 'command': 'start', 'source': 'mnt-data.mount', 'enable': true },
     ]
 }

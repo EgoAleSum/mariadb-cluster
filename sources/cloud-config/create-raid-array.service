@@ -1,0 +1,13 @@
+[Unit]
+Description=Create RAID array on data disks
+
+Before=mnt-data.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/bash /opt/bin/create-raid-array.sh
+
+[Install]
+WantedBy=multi-user.target
+RequiredBy=mnt-data.mount

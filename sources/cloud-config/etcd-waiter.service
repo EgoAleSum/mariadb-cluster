@@ -3,7 +3,6 @@ Description=Wait for etcd2 to be online
 
 Wants=network-online.target etcd2.service
 After=network-online.target etcd2.service
-RequiredBy=docker.service
 Before=docker.service fleet.service
 
 [Service]
@@ -11,3 +10,6 @@ Type=oneshot
 RemainAfterExit=true
 ExecStartPre=/usr/bin/chmod +x /opt/bin/etcd-waiter.sh
 ExecStart=/usr/bin/bash /opt/bin/etcd-waiter.sh
+
+[Install]
+RequiredBy=docker.service

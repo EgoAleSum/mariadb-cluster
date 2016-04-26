@@ -1,10 +1,12 @@
 'use strict'
 
 var template = require('../azuredeploy.json')
+var dataDiskTemplate = require('./data-disk.json')
+var storageAccountTemplate = require('./storage-account.json')
 
 // Generate Azure Resource Manager template
 module.exports = function(formValues, yamlB64) {
-    var result = Object.assign({}, template)
+    var result = JSON.parse(JSON.stringify(template))
     
     // Node size
     result.parameters.vmSize.defaultValue = formValues.nodeSize
@@ -23,6 +25,37 @@ module.exports = function(formValues, yamlB64) {
     
     // cloud-config.yaml (base64)
     result.parameters.cloudConfig.defaultValue = yamlB64
+    
+    // Data disks: create a storage account per each node, since each account can hold 40 VHDs
+    result.resources.push(JSON.parse(JSON.stringify(storageAccountTemplate)))
+    
+    // Add the disks to the VM resource
+    for(var i = 0; i < result.resources.length; i++) {
+        var res = result.resources[i]
+        if(res && res.type && res.type == 'Microsoft.Compute/virtualMachines') {
+            // Dependency on the storage accounts
+            if(!res.dependsOn) {
+                res.dependsOn = []
+            }
+            res.dependsOn.push("[concat('Microsoft.Storage/storageAccounts/', toLower( concat( parameters('storageAccountNamePrefix'), 'vhd', copyindex(), uniqueString(resourceGroup().id) ) ) )]")
+            
+            // Attach data disks
+            console.log(res.properties.storageProfile)
+            if(!res.properties.storageProfile.dataDisks) {
+                res.properties.storageProfile.dataDisks = []
+            }
+            var dataDisks = res.properties.storageProfile.dataDisks
+            for(var lun = 0; lun < formValues.dataDisks; lun++) {
+                var attach = JSON.parse(JSON.stringify(dataDiskTemplate))
+                attach.name = attach.name.replace('*', lun)
+                attach.lun = lun
+                attach.vhd.uri = attach.vhd.uri.replace('*', lun)
+                dataDisks.push(attach)
+            }
+            
+            break
+        }
+    }
     
     // Return JSON string
     return JSON.stringify(result, false, 2)

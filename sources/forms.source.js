@@ -30,6 +30,28 @@ var prepareFormMode = function() {
     })
 }
 
+var dataDiskUpdate = function(sizeName) {
+    // Maximum number of data disks, limited to 40
+    var max = 2
+    var size = azureVMSizes[sizeName]
+    if(size && size.disks) {
+        max = size.disks
+    }
+    if(max > 40) {
+        max = 40
+    }
+    
+    // Add options
+    var $dataDiskSelect = $('#data-disks')
+    $dataDiskSelect.empty()
+    for(var i = 2; i <= max; i++) {
+        $dataDiskSelect.append('<option value="'+i+'">'+i+'</option>')
+    }
+    
+    // Set value to the maximum one
+    $dataDiskSelect.val(max)
+}
+
 var nodeSize = function() {
     // Populate all nodes in the select
     var $nodeSizeSelect = $('#node-size')
@@ -38,6 +60,14 @@ var nodeSize = function() {
             $nodeSizeSelect.append('<option value="'+k+'">'+k+'</option>')
         }
     }
+    
+    // Bind action to change event, to update select for data disk count
+    $nodeSizeSelect.on('change', function() {
+        dataDiskUpdate($nodeSizeSelect.val())
+    })
+    
+    // Initial population of data disk count
+    dataDiskUpdate($nodeSizeSelect.val())
 }
 
 var formSubmit = function(done, click) {
@@ -69,6 +99,14 @@ var formSubmit = function(done, click) {
             formValues.nodeSize = $nodeSize.val() + ''
             if(!(~Object.keys(azureVMSizes).indexOf(formValues.nodeSize))) {
                 $nodeSize.parents('.form-group').addClass('has-error')
+                return false
+            }
+            
+            // Data disks
+            var $dataDisks = $('#data-disks', $form)
+            formValues.dataDisks = parseInt($dataDisks.val())
+            if(formValues.dataDisks < 2 || formValues.dataDisks > azureVMSizes[formValues.nodeSize].disks || formValues.dataDisks > 40) {
+                $dataDisks.parents('.form-group').addClass('has-error')
                 return false
             }
             

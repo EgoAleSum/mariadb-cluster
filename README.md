@@ -101,4 +101,5 @@ Structure of the repository:
 
 ## TODO
 
-- [ ] On Azure, deploy data disks to attach to the VM, to store database data
+- [ ] Switch WSREP engine from rsync to xtrabackup (see https://github.com/docker-library/mariadb/pull/47)
+- [ ] Enable iptables (see https://www.jimmycuadra.com/posts/securing-coreos-with-iptables/)
