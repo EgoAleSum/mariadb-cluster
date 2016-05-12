@@ -36,6 +36,7 @@ mdadm --create /dev/md0 --level 0 --raid-devices $COUNT $PARTITIONS
 
 # Crete an ext4 partition on md0
 echo "Create ext4 volume"
+# TODO: Test this: "-E lazy_itable_init"
 mkfs -t ext4 /dev/md0
 
 echo "Done!"

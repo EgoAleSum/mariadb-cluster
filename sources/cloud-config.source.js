@@ -40,7 +40,7 @@ var buildYaml = function(formValues, done) {
     var template = (formValues.mode == 'arm') ? yamlARMSource : yamlSource
     
     // Create the tree
-    var yamlTree = Object.assign({}, template.tree)
+    var yamlTree = JSON.parse(JSON.stringify(template.tree)) // Deep clone the object
     
     // etcd2 discovery url
     yamlTree.coreos.etcd2.discovery = formValues.discoveryUrl
@@ -60,7 +60,7 @@ var buildYaml = function(formValues, done) {
     // Read files to be created and append the data to the yaml tree
     for(var k in template.readFiles) {
         if(template.readFiles.hasOwnProperty(k)) {
-            var push = Object.assign({}, template.readFiles[k]) // Clone the object
+            var push = JSON.parse(JSON.stringify(template.readFiles[k])) // Deep clone the object
             push.content = pack[k]
             
             if(k == 'mysql_server.cnf') {
@@ -75,7 +75,7 @@ var buildYaml = function(formValues, done) {
     for(var i = 0, len = template.units.length; i < len; i++) {
         var unit = template.units[i]
         
-        var push = Object.assign({}, unit) // Clone the object
+        var push = JSON.parse(JSON.stringify(unit)) // Deep clone the object
         delete push.source
         delete push['drop-ins-source']
         
