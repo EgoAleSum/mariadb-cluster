@@ -60,6 +60,8 @@ There are only a few restrictions to keep in mind when designing your architectu
 3. It's strongly advised to use an odd number of nodes to avoid the risk of "split-brain conditions" (please see the [official Galera documentation](http://galeracluster.com/documentation-webpages/weightedquorum.html)).
 4. The default password for the `root` user in the database is **`my-secret-pw`**; it's recommended to change it as soon as possible.
 
+> **Note:** when in "Cloud Config mode", the generated YAML file is slightly different than the one generated in "Azure Resource Manager template" mode. In the latter case, a few more units and scripts are added to attach and format data disks attached to the Azure Virtual Machines.
+
 
 ## Notes on parameters for the generator
 
