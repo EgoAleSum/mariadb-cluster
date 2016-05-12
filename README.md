@@ -54,6 +54,7 @@ SET PASSWORD FOR 'root'@'%' = PASSWORD('newpass');
 If you use the "Cloud Config mode", the generator app will create only a `cloud-config.yaml` file (in plaintext and base64-encoded). You can use that file to spin up your own cluster, in any public or private cloud.
 
 There are only a few restrictions to keep in mind when designing your architecture:
+
 1. The `cloud-config.yaml` file generated is meant to be used with CoreOS 899+ (latest Stable release as of writing); it has not been tested with any other distribution, and it's likely not to work.
 2. Your nodes must be named `mariadb-node-0`, `mariadb-node-1`, etc, up to `mariadb-node-4`. All VMs in the cluster must be able to connect to each other using those names, so you need to ensure that a naming resolution service exists in your infrastructure. Indeed, in the current version, the MariaDB configuration file has hardcoded the hostnames of the VMs; this design choice may change in the future, however.
 3. It's strongly advised to use an odd number of nodes to avoid the risk of "split-brain conditions" (please see the [official Galera documentation](http://galeracluster.com/documentation-webpages/weightedquorum.html)).
@@ -92,6 +93,7 @@ If you want to modify the generator app (for example because you want to alter t
 5. To watch for changes to source files and re-compile automatically, you can use `$ grunt watch`.
 
 Structure of the repository:
+
 - The `generator.html` app is built from files in the `sources` folder.
 - Inside the source folder, the `cloud-config` directory contains the raw deployment scripts, systemd units and configuration files to be copied on the VMs. Those files are then merged in a single JSON document by Grunt at "compile time". 
 - The entry-point for the JavaScript code is the `app.source.js` file. Using Browserify, Grunt merges all JavaScript code into `app.build.js`.
