@@ -7,10 +7,10 @@
   "license": "Unlicense",
   "dependencies": {
     "co": "^4.6.0",
-    "grunt": "^1.0.1",
+    "grunt": "^1.0.0",
     "grunt-browserify": "^5.0.0",
     "grunt-contrib-watch": "^1.0.0",
-    "grunt-html-build": "^0.5.3",
+    "grunt-html-build": "^0.6.0",
     "js-yaml": "^3.6.0",
     "mz": "^2.4.0"
   }
