@@ -11,6 +11,8 @@ The starting point is the generator app, which is a static HTML file that runs i
 
 **Clone this repository in your local machine, then open the `generator.html` file with a web browser.** Using one of the "evergreen browsers" (Edge, Chrome, Safari, Firefox) is recommended. You will need to be connected to the Internet for the web application to work properly.
 
+> Note: if you're having issues with the page not working while opening it from your local disk, you might need to manually set the "etcd2 Discovery URL" parameter, or put the page on a web server.
+
 The web application offers two modes:
 - **Azure Resource Manager**: in this mode, an ARM template (a JSON document) is generated, ready to be deployed to Azure. The resulting ARM template includes the Cloud Config file too.
 - **Only cloud-config.yaml**: generates only the Cloud Config file, in plaintext and base64-encoded. This file can be used to startup the Galera Cluster on any public/private cloud.
