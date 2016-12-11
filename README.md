@@ -1,17 +1,20 @@
 # MariaDB + Galera Cluster on CoreOS with Docker
 
+> **The generator web app is now hosted on GitHub pages at the URL: [http://egoalesum.github.io/mariadb-cluster/generator.html](http://egoalesum.github.io/mariadb-cluster/generator.html)**
+
 This repository contains a generator app for the Cloud Config and the Azure Resource Manager (ARM) template files, to create a MariaDB database with Galera Cluster, running inside Docker containers on CoreOS. You can read more about the architecture, and the choices behind it, on [this blog post](http://withblue.ink/2016/03/09/galera-cluster-mariadb-coreos-and-docker-part-1.html). The ARM template is a JSON file that can be deployed automatically with just a few clicks on Azure and it includes a tailored Cloud Config file.
 
-The starting point is the generator app, which is a static HTML file that runs inside any modern web browser to create ad-hoc Cloud Config and Azure ARM template files. In order to use the generator, clone this repository, then open the file `generator.html` with a web browser.
+The starting point is the generator app, which is a static HTML file that runs inside any modern web browser to create ad-hoc Cloud Config and Azure ARM template files. You can use the [hosted generator app](http://egoalesum.github.io/mariadb-cluster/generator.html), or you can clone the repository locally and open `generator.html` with any web browser.
 
 **Please ignore the pre-made `azuredeploy.json` file in this repository, and always generate a new one using the generator app.** The reason why this repository includes `azuredeploy.json` and `azuredeploy.parameters.json` is just for testing with CI.
 
 
 ## Getting started
 
-**Clone this repository in your local machine, then open the `generator.html` file with a web browser.** Using one of the "evergreen browsers" (Edge, Chrome, Safari, Firefox) is recommended. You will need to be connected to the Internet for the web application to work properly.
+You can use the generator app hosted on GitHub pages or clone the repository and run it locally:
 
-> Note: if you're having issues with the page not working while opening it from your local disk, you might need to manually set the "etcd2 Discovery URL" parameter, or put the page on a web server.
+- **Recommended:** Use the [hosted generator app](http://egoalesum.github.io/mariadb-cluster/generator.html)
+- If you prefer to run the app locally, clone this repository in your local machine, then open the `generator.html` file with a web browser. Using one of the "evergreen browsers" (Edge, Chrome, Safari, Firefox) is recommended. You will need to be connected to the Internet for the web application to work properly. Please note that if you're having issues with the page not working while opening it from your local disk, you might need to manually set the "etcd2 Discovery URL" parameter, or put the page on a web server.
 
 The web application offers two modes:
 - **Azure Resource Manager**: in this mode, an ARM template (a JSON document) is generated, ready to be deployed to Azure. The resulting ARM template includes the Cloud Config file too.
@@ -24,7 +27,7 @@ The ARM template allows you to deploy a MariaDB + Galera Cluster (based on CoreO
 ### How to deploy the template
 
 1. Ensure you have an active Azure subscription. You can also get a [free trial](http://azure.com/free).
-2. Using the `generator.html` page in your machine, create the Azure Resource Manager template, properly configured.
+2. Using the [hosted generator app](http://egoalesum.github.io/mariadb-cluster/generator.html) or the `generator.html` page on your machine, create the Azure Resource Manager template, properly configured.
 3. Open the [Azure Portal](https://portal.azure.com), then press "+ New" on the top left corner, search for "Template deployment" and select the result with the same name. Then click on the "Create" button.
 4. In the "Template" blade, paste the "Azure Resource Manager template" JSON document generated with the HTML app.
 5. In the "Parameters" blade, leave all values to their default (the JSON you pasted has all your parameters already hardcoded as default values).
@@ -49,6 +52,8 @@ The default password for the `root` user in the database is **`my-secret-pw`**; 
 ````sql
 SET PASSWORD FOR 'root'@'%' = PASSWORD('newpass');
 ````
+
+Note: when using Galera Cluster, it's important not to edit the `mysql` system database, because those changes won't be replicated across the nodes. To edit users, leverage SQL statements such as `CREATE USER`, `SET PASSWORD`, etc; do not alter the `mysql.user` table directly. 
 
 
 ## Using the Cloud Config mode
@@ -108,4 +113,3 @@ Structure of the repository:
 ## TODO
 
 - [ ] Switch WSREP engine from rsync to xtrabackup (see https://github.com/docker-library/mariadb/pull/47)
-- [ ] Enable iptables (see https://www.jimmycuadra.com/posts/securing-coreos-with-iptables/)
