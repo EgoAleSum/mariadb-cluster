@@ -10,7 +10,7 @@
     "grunt": "^1.0.0",
     "grunt-browserify": "^5.0.0",
     "grunt-contrib-watch": "^1.0.0",
-    "grunt-html-build": "^0.6.0",
+    "grunt-html-build": "^0.7.0",
     "js-yaml": "^3.6.0",
     "mz": "^2.4.0"
   }

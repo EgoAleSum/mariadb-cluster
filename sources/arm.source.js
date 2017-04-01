@@ -40,7 +40,7 @@ module.exports = function(formValues, yamlB64) {
             res.dependsOn.push("[concat('Microsoft.Storage/storageAccounts/', toLower( concat( parameters('storageAccountNamePrefix'), 'vhd', copyindex(), uniqueString(resourceGroup().id) ) ) )]")
             
             // Attach data disks
-            console.log(res.properties.storageProfile)
+            //console.log(res.properties.storageProfile)
             if(!res.properties.storageProfile.dataDisks) {
                 res.properties.storageProfile.dataDisks = []
             }
