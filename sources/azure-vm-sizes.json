@@ -60,6 +60,11 @@
   "Standard_H16r": { "cores": 16, "memory": 112, "disks": 32 },
   "Standard_H16mr": { "cores": 16, "memory": 224, "disks": 32 },
 
+  "Standard_L4s": { "cores": 4, "memory": 32, "disks": 8, "premiumStorage": true },
+  "Standard_L8s": { "cores": 8, "memory": 64, "disks": 16, "premiumStorage": true },
+  "Standard_L16s": { "cores": 16, "memory": 128, "disks": 32, "premiumStorage": true },
+  "Standard_L32s": { "cores": 32, "memory": 256, "disks": 64, "premiumStorage": true },
+
   "Standard_A1": { "cores": 1, "memory": 1.75, "disks": 2 },
   "Standard_A2": { "cores": 2, "memory": 3.5, "disks": 4 },
   "Standard_A3": { "cores": 4, "memory": 7,  "disks": 8 },
