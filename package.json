@@ -1,17 +1,21 @@
 {
   "name": "autobuild",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Auto-build tools for the template",
   "author": "Alessandro Segala",
-  "license": "Unlicense",
+  "license": "MIT",
+  "scripts": {
+    "build": "./node_modules/.bin/grunt"
+  },
   "dependencies": {
     "co": "^4.6.0",
     "grunt": "^1.0.0",
-    "grunt-browserify": "^5.0.0",
+    "grunt-cli": "^1.2.0",
+    "grunt-browserify": "^5.2.0",
     "grunt-contrib-watch": "^1.0.0",
     "grunt-html-build": "^0.7.0",
-    "js-yaml": "^3.6.0",
-    "mz": "^2.4.0"
+    "js-yaml": "^3.10.0",
+    "mz": "^2.7.0"
   }
 }
