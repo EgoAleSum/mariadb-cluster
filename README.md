@@ -6,8 +6,6 @@ This repository contains a generator app for the Cloud Config and the Azure Reso
 
 The starting point is the generator app, which is a static HTML file that runs inside any modern web browser to create ad-hoc Cloud Config and Azure ARM template files. You can use the [hosted generator app](http://egoalesum.github.io/mariadb-cluster/generator.html), or you can clone the repository locally and open `generator.html` with any web browser.
 
-**Please ignore the pre-made `azuredeploy.json` file in this repository, and always generate a new one using the generator app.** The reason why this repository includes `azuredeploy.json` and `azuredeploy.parameters.json` is just for testing with CI.
-
 
 ## Getting started
 
