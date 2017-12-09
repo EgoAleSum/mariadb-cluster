@@ -43,13 +43,24 @@
         </div>
       </div>
       <div class="form-group" gen-role="conditional-param" gen-mode="arm">
-        <label for="data-disks" class="col-sm-3 control-label">Number of data disks per node</label>
+        <label for="disk-type" class="col-sm-3 control-label">Disk type</label>
         <div class="col-sm-3">
-          <select name="data-disks" id="data-disks" class="form-control" required></select>
-          <div class="small help-block">Stripe across N data disks, each one with 1,023GB size and 500 IOPs. Each VM size has a limit on number of data disks; please note that this setting may limit your ability to scale down a node.</div> 
+          <select name="disk-type" id="disk-type" class="form-control" required>
+            <optgroup label="Managed disks" id="managed-disk-list"></optgroup>
+            <optgroup label="Unmanaged disks">
+              <option value="unmanaged-standard">Standard unmanaged (1,023GB)</option>
+            </optgroup>
+          </select>
         </div>
       </div>
       <div class="form-group" gen-role="conditional-param" gen-mode="arm">
+        <label for="data-disks" class="col-sm-3 control-label">Number of data disks per node</label>
+        <div class="col-sm-3">
+          <select name="data-disks" id="data-disks" class="form-control" required></select>
+          <div class="small help-block">Stripe across N data disks, each one with <span id="iops"></span> IOPs. Each VM size has a limit on number of data disks; please note that this setting may limit your ability to scale down a node.</div> 
+        </div>
+      </div>
+      <div class="form-group" gen-role="conditional-param" gen-mode="arm" id="storage-account-prefix-container">
         <label for="storage-account-prefix" class="col-sm-3 control-label">Storage Account name prefix</label>
         <div class="col-sm-3">
           <input name="storage-account-prefix" id="storage-account-prefix" class="form-control" required pattern="[0-9a-z]{1,7}" />

@@ -1,0 +1,11 @@
+{
+  "managed-s4": { "sku": "S4", "type": "standard", "size": 32, "iops": 500 },
+  "managed-s6": { "sku": "S6", "type": "standard", "size": 64, "iops": 500 },
+  "managed-s10": { "sku": "S10", "type": "standard", "size": 128, "iops": 500 },
+  "managed-s20": { "sku": "S20", "type": "standard", "size": 512, "iops": 500 },
+  "managed-s30": { "sku": "S30", "type": "standard", "size": 1024, "iops": 500 },
+
+  "premium-p10": { "sku": "P10", "type": "premium", "size": 128, "iops": 500 },
+  "premium-p20": { "sku": "P20", "type": "premium", "size": 512, "iops": 2300 },
+  "premium-p30": { "sku": "P30", "type": "premium", "size": 1024, "iops": 5000 }
+}

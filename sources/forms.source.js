@@ -1,6 +1,7 @@
 'use strict'
 
 var azureVMSizes = require('./azure-vm-sizes.json')
+var azureManagedDisks = require('./azure-managed-disks.json')
 
 var formMode = false
 
@@ -68,6 +69,58 @@ var nodeSize = function() {
     
     // Initial population of data disk count
     dataDiskUpdate($nodeSizeSelect.val())
+}
+
+var diskTypeUpdate = function(diskType) {
+    // Check if disk is managed or unmanaged
+    var isManaged = (diskType != 'unmanaged-standard')
+
+    // Show or hide storage account prefix field
+    if(isManaged) {
+        $('#storage-account-prefix-container').hide()
+    }
+    else {
+        $('#storage-account-prefix-container').show()
+    }
+
+    // Update the IOPS label
+    var iops
+    if(isManaged) {
+        iops = azureManagedDisks[diskType].iops
+    }
+    else {
+        iops = 500
+    }
+    $('#iops').text(iops)
+}
+
+var managedDiskSizes = function() {
+    // Populate all managed disk sizes
+    var $diskType = $('#disk-type')
+    var $list = $('#managed-disk-list')
+    for(var k in azureManagedDisks) {
+        if(azureManagedDisks.hasOwnProperty(k)) {
+            var label = azureManagedDisks[k].sku
+            if(azureManagedDisks[k].type == 'premium') {
+                label += ' Premium'
+            }
+            else {
+                label += ' Standard'
+            }
+
+            label += ' ('+azureManagedDisks[k].size+' GB)'
+
+            $list.append('<option value="'+k+'">'+label+'</option>')
+        }
+    }
+
+    // Bind action to change event
+    $diskType.on('change', function() {
+        diskTypeUpdate($diskType.val())
+    })
+    
+    // Initial action
+    diskTypeUpdate($diskType.val())
 }
 
 var formSubmit = function(done, click) {
@@ -183,5 +236,6 @@ module.exports = {
     prepareFormMode: prepareFormMode,
     setFormMode: setFormMode,
     nodeSize: nodeSize,
+    managedDiskSizes: managedDiskSizes,
     formSubmit: formSubmit
 }

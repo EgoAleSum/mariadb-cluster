@@ -1,8 +1,10 @@
 'use strict'
 
-var template = require('../azuredeploy.json')
-var dataDiskTemplate = require('./data-disk.json')
-var storageAccountTemplate = require('./storage-account.json')
+var template = require('./azure.template.json')
+var templateMD = require('./azure-md.template.json')
+var dataDiskTemplate = require('./data-disk.template.json')
+var dataDiskTemplateMD = require('./data-disk-md.template.json')
+var storageAccountTemplate = require('./storage-account.template.json')
 
 // Generate Azure Resource Manager template
 module.exports = function(formValues, yamlB64) {

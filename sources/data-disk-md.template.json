@@ -1,0 +1,7 @@
+{
+	"name": "DataDisk*",
+	"diskSizeGB": "1023",
+	"lun": 0,
+	"caching": "None",
+	"createOption": "Empty"
+}

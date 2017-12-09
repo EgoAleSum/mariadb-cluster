@@ -43,13 +43,24 @@
         </div>
       </div>
       <div class="form-group" gen-role="conditional-param" gen-mode="arm">
-        <label for="data-disks" class="col-sm-3 control-label">Number of data disks per node</label>
+        <label for="disk-type" class="col-sm-3 control-label">Disk type</label>
         <div class="col-sm-3">
-          <select name="data-disks" id="data-disks" class="form-control" required></select>
-          <div class="small help-block">Stripe across N data disks, each one with 1,023GB size and 500 IOPs. Each VM size has a limit on number of data disks; please note that this setting may limit your ability to scale down a node.</div> 
+          <select name="disk-type" id="disk-type" class="form-control" required>
+            <optgroup label="Managed disks" id="managed-disk-list"></optgroup>
+            <optgroup label="Unmanaged disks">
+              <option value="unmanaged-standard">Standard unmanaged (1,023GB)</option>
+            </optgroup>
+          </select>
         </div>
       </div>
       <div class="form-group" gen-role="conditional-param" gen-mode="arm">
+        <label for="data-disks" class="col-sm-3 control-label">Number of data disks per node</label>
+        <div class="col-sm-3">
+          <select name="data-disks" id="data-disks" class="form-control" required></select>
+          <div class="small help-block">Stripe across N data disks, each one with <span id="iops"></span> IOPs. Each VM size has a limit on number of data disks; please note that this setting may limit your ability to scale down a node.</div> 
+        </div>
+      </div>
+      <div class="form-group" gen-role="conditional-param" gen-mode="arm" id="storage-account-prefix-container">
         <label for="storage-account-prefix" class="col-sm-3 control-label">Storage Account name prefix</label>
         <div class="col-sm-3">
           <input name="storage-account-prefix" id="storage-account-prefix" class="form-control" required pattern="[0-9a-z]{1,7}" />
@@ -143,13 +154,550 @@ s=e("buffer").Buffer}catch(e){}var c=e("../type"),u="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 </script>
 
 <script type="text/javascript">(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+// Main application
+
+'use strict'
+
+var forms = require('./forms.source.js')
+var cloudConfig = require('./cloud-config.source.js')
+var arm = require('./arm.source.js')
+
+$(document).ready(function() {
+    // Hide the output panel
+    $('[gen-role="page"][gen-page="output"]').hide()
+    
+    // Restart button action
+    $('[gen-role="restart-button"]').on('click', function() {
+        $('[gen-role="page"]').show()
+            .filter('[gen-page="output"]').hide()
+    })
+    
+    // Form mode: prepare, and set default to Azure Resource Manager template
+    forms.prepareFormMode()
+    forms.setFormMode('arm')
+    
+    // Populate all node sizes in the select and bind action to change event to populate data disk select
+    // Note: this must run before forms.managedDiskSizes()
+    forms.nodeSize()
+
+    // Populate managed disk sizes
+    forms.managedDiskSizes()
+    
+    // Callback to show output
+    var showOutput = function(armTemplate, yamlString, yamlB64) {
+        // Restore button
+        $('[gen-role="generate-button"]').prop('disabled', false).text('Generate')
+        
+        // Show the output panel
+        $('[gen-role="page"]').hide()
+            .filter('[gen-page="output"]').show()
+        
+        // Azure Resource Manager template
+        if(armTemplate) {
+            $('[gen-role="output"][gen-content="arm"]').show()
+            $('[gen-role="output"][gen-content="arm"] code').text(armTemplate)
+        }
+        else {
+            $('[gen-role="output"][gen-content="arm"]').hide()
+        }
+        
+        // cloud-config.yaml
+        $('[gen-role="output"][gen-content="yaml"] code').text(yamlString)
+        $('[gen-role="output"][gen-content="yamlb64"] code').text(yamlB64)
+        
+        // Highlight syntax
+        $('pre code').each(function(i, block) {
+            hljs.highlightBlock(block)
+        })
+    }
+    
+    // Bind to form submit action
+    forms.formSubmit(function(formValues) {
+        // Generate the cloud-config.yaml file
+        cloudConfig(formValues, function(yamlString, yamlB64) {
+            // Generate the Azure Resource Manager template if needed
+            var armTemplate = false
+            if(formValues.mode == 'arm') {
+                armTemplate = arm(formValues, yamlB64)
+            }
+            
+            // Show output
+            showOutput(armTemplate, yamlString, yamlB64)
+        })
+    }, function() {
+        // Disable button on click
+        $('[gen-role="generate-button"]').prop('disabled', true).text('Generating… Please wait')
+    })
+})
+
+},{"./arm.source.js":2,"./cloud-config.source.js":8,"./forms.source.js":11}],2:[function(require,module,exports){
+'use strict'
+
+var template = require('./azure.template.json')
+var templateMD = require('./azure-md.template.json')
+var dataDiskTemplate = require('./data-disk.template.json')
+var dataDiskTemplateMD = require('./data-disk-md.template.json')
+var storageAccountTemplate = require('./storage-account.template.json')
+
+// Generate Azure Resource Manager template
+module.exports = function(formValues, yamlB64) {
+    var result = JSON.parse(JSON.stringify(template))
+    
+    // Node size
+    result.parameters.vmSize.defaultValue = formValues.nodeSize
+    
+    // Node count
+    result.parameters.numberOfNodes.defaultValue = formValues.nodeCount
+    
+    // Storage account name prefix
+    result.parameters.storageAccountNamePrefix.defaultValue = formValues.storageAccountPrefix
+    
+    // Admin username
+    result.parameters.adminUserName.defaultValue = formValues.adminUsername
+    
+    // SSH key
+    result.parameters.sshKeyData.defaultValue = formValues.sshKey
+    
+    // cloud-config.yaml (base64)
+    result.parameters.cloudConfig.defaultValue = yamlB64
+    
+    // Data disks: create a storage account per each node, since each account can hold 40 VHDs
+    result.resources.push(JSON.parse(JSON.stringify(storageAccountTemplate)))
+    
+    // Add the disks to the VM resource
+    for(var i = 0; i < result.resources.length; i++) {
+        var res = result.resources[i]
+        if(res && res.type && res.type == 'Microsoft.Compute/virtualMachines') {
+            // Dependency on the storage accounts
+            if(!res.dependsOn) {
+                res.dependsOn = []
+            }
+            res.dependsOn.push("[concat('Microsoft.Storage/storageAccounts/', toLower( concat( parameters('storageAccountNamePrefix'), 'vhd', copyindex(), uniqueString(resourceGroup().id) ) ) )]")
+            
+            // Attach data disks
+            //console.log(res.properties.storageProfile)
+            if(!res.properties.storageProfile.dataDisks) {
+                res.properties.storageProfile.dataDisks = []
+            }
+            var dataDisks = res.properties.storageProfile.dataDisks
+            for(var lun = 0; lun < formValues.dataDisks; lun++) {
+                var attach = JSON.parse(JSON.stringify(dataDiskTemplate))
+                attach.name = attach.name.replace('*', lun)
+                attach.lun = lun
+                attach.vhd.uri = attach.vhd.uri.replace('*', lun)
+                dataDisks.push(attach)
+            }
+            
+            break
+        }
+    }
+    
+    // Return JSON string
+    return JSON.stringify(result, false, 2)
+}
+
+},{"./azure-md.template.json":4,"./azure.template.json":6,"./data-disk-md.template.json":9,"./data-disk.template.json":10,"./storage-account.template.json":12}],3:[function(require,module,exports){
+module.exports={
+  "managed-s4": { "sku": "S4", "type": "standard", "size": 32, "iops": 500 },
+  "managed-s6": { "sku": "S6", "type": "standard", "size": 64, "iops": 500 },
+  "managed-s10": { "sku": "S10", "type": "standard", "size": 128, "iops": 500 },
+  "managed-s20": { "sku": "S20", "type": "standard", "size": 512, "iops": 500 },
+  "managed-s30": { "sku": "S30", "type": "standard", "size": 1024, "iops": 500 },
+
+  "premium-p10": { "sku": "P10", "type": "premium", "size": 128, "iops": 500 },
+  "premium-p20": { "sku": "P20", "type": "premium", "size": 512, "iops": 2300 },
+  "premium-p30": { "sku": "P30", "type": "premium", "size": 1024, "iops": 5000 }
+}
+},{}],4:[function(require,module,exports){
 module.exports={
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
     "vmSize": {
       "type": "string",
-      "defaultValue": "Standard_D1",
+      "defaultValue": "Standard_D1_v2",
+      "metadata": {
+        "description": "Instance size for the VMs"
+      }
+    },
+    "numberOfNodes": {
+      "type": "int",
+      "defaultValue": 3,
+      "minValue": 3,
+      "maxValue": 5, 
+      "metadata": {
+        "description": "Number of nodes to create"
+      }
+    },
+    "adminUserName": {
+      "type": "string",
+      "defaultValue": "core",
+      "metadata": {
+        "description": "Username to login to the VMs"
+      }
+    },
+    "sshKeyData": {
+      "type": "string",
+      "metadata": {
+        "description": "Public key for SSH authentication"
+      }
+    },
+    "cloudConfig": {
+      "type": "string",
+      "metadata": {
+        "description": "Base64-encoded cloud-config.yaml file"
+      }
+    }
+  },
+  "variables": {
+    "securityGroupName": "mariadb-nsg",
+    "virtualNetworkName": "[concat( resourceGroup().name, '-VNet' )]",
+    "addressPrefix": "10.0.0.0/16",
+    "subnet1Name": "mariadb-subnet",
+    "subnet1Prefix": "10.0.1.0/24",
+    "subnet1Ref": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName')), '/subnets/', variables('subnet1Name'))]",
+    "vmNamePrefix": "mariadb-node-",
+    "osImageSku": "Stable",
+    "nicNamePrefix": "mariadb-nic-",
+    "availabilitySetName": "mariadb-as",
+    "storageAccountType": "Standard_LRS",
+    "sshKeyPath": "[concat('/home/', parameters('adminUsername'),'/.ssh/authorized_keys')]",
+    "loadBalancerIp": "10.0.1.4",
+    "loadBalancerName": "mariadb-lb",
+    "backendPoolName": "BackendPoolMySQL",
+    "backendPoolRef": "[concat(resourceId('Microsoft.Network/loadBalancers/', variables('loadBalancerName')), '/backendAddressPools/', variables('backendPoolName'))]",
+    "lbRef": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
+    "lbRuleName": "MySQL-Rule",
+    "lbProbeName": "MySQL-Probe"
+  },
+  "resources": [
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('securityGroupName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "SSH",
+            "properties": {
+              "description": "Allows SSH traffic from the Virtual Network",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationPortRange": "22",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "MySQL",
+            "properties": {
+              "description": "Allows MySQL traffic from the Virtual Network",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationPortRange": "3306",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 200,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnet1Name')]",
+            "properties": {
+              "addressPrefix": "[variables('subnet1Prefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(variables('nicNamePrefix'), copyindex())]",
+      "copy": {
+        "name": "nicLoop",
+        "count": "[parameters('numberOfNodes')]"
+      },
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('securityGroupName'))]",
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('subnet1Ref')]"
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[variables('backendPoolRef')]"
+                }
+              ]
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('securityGroupName'))]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "[variables('availabilitySetName')]",
+      "location": "[resourceGroup().location]"
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "[variables('loadBalancerName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "LoadBalancerFrontend",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnet1Ref')]"
+              },
+              "privateIPAddress": "[variables('loadBalancerIp')]",
+              "privateIPAllocationMethod": "Static"
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "[variables('backendPoolName')]"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "[variables('lbRuleName')]",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('lbRef'), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('lbRef'), '/backendAddressPools/', variables('backendPoolName'))]"
+              },
+              "probe": {
+                "id": "[concat(variables('lbRef'), '/probes/', variables('lbProbeName'))]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 3306,
+              "backendPort": 3306,
+              "idleTimeoutInMinutes": 15
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "[variables('lbProbeName')]",
+            "properties": {
+              "protocol": "Tcp",
+              "port": 3306,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2016-04-30-preview",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(variables('vmNamePrefix'), copyindex())]",
+      "copy": {
+        "name": "vmLoop",
+        "count": "[parameters('numberOfNodes')]"
+      },
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicNamePrefix'), copyindex())]"
+      ],
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('availabilitySetName'))]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(variables('vmNamePrefix'), copyindex())]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "customData": "[parameters('cloudConfig')]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": "true",
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[variables('sshKeyPath')]",
+                  "keyData": "[parameters('sshKeyData')]"
+                }
+              ]
+            }
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "CoreOS",
+            "offer": "CoreOS",
+            "sku": "[variables('osImageSku')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[concat(variables('vmNamePrefix'), copyindex())]",
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(variables('nicNamePrefix'), copyindex()))]"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+
+},{}],5:[function(require,module,exports){
+module.exports={
+  "Standard_A1_v2": { "cores": 1, "memory": 2, "disks": 2 },
+  "Standard_A2_v2": { "cores": 2, "memory": 4, "disks": 4 },
+  "Standard_A4_v2": { "cores": 4, "memory": 8, "disks": 8 },
+  "Standard_A8_v2": { "cores": 8, "memory": 16, "disks": 16 },
+  "Standard_A2m_v2": { "cores": 2, "memory": 16, "disks": 2 },
+  "Standard_A4m_v2": { "cores": 4, "memory": 32, "disks": 4 },
+  "Standard_A8m_v2": { "cores": 8, "memory": 64, "disks": 16 },
+  
+  "Standard_D1_v2": { "cores": 1, "memory": 3.5, "disks": 2 },
+  "Standard_D2_v2": { "cores": 2, "memory": 7, "disks": 4 },
+  "Standard_D3_v2": { "cores": 4, "memory": 14, "disks": 8 },
+  "Standard_D4_v2": { "cores": 8, "memory": 28, "disks": 16 },
+  "Standard_D5_v2": { "cores": 16, "memory": 56, "disks": 32 },
+  "Standard_D11_v2": { "cores": 2, "memory": 14, "disks": 4 },
+  "Standard_D12_v2": { "cores": 4, "memory": 28, "disks": 8 },
+  "Standard_D13_v2": { "cores": 8, "memory": 56, "disks": 16 },
+  "Standard_D14_v2": { "cores": 16, "memory": 112, "disks": 32 },
+  "Standard_D15_v2": { "cores": 20, "memory": 140, "disks": 40 },
+  
+  "Standard_DS1_v2": { "cores": 1, "memory": 3.5, "disks": 2, "premiumStorage": true },
+  "Standard_DS2_v2": { "cores": 2, "memory": 7, "disks": 4, "premiumStorage": true },
+  "Standard_DS3_v2": { "cores": 4, "memory": 14, "disks": 8, "premiumStorage": true },
+  "Standard_DS4_v2": { "cores": 8, "memory": 28, "disks": 16, "premiumStorage": true },
+  "Standard_DS5_v2": { "cores": 16, "memory": 56, "disks": 32, "premiumStorage": true },
+  "Standard_DS11_v2": { "cores": 2, "memory": 14, "disks": 4, "premiumStorage": true },
+  "Standard_DS12_v2": { "cores": 4, "memory": 28, "disks": 8, "premiumStorage": true },
+  "Standard_DS13_v2": { "cores": 8, "memory": 56, "disks": 16, "premiumStorage": true },
+  "Standard_DS14_v2": { "cores": 16, "memory": 112, "disks": 32, "premiumStorage": true },
+  "Standard_DS15_v2": { "cores": 20, "memory": 140, "disks": 40, "premiumStorage": true },
+
+  "Standard_F1": { "cores": 1, "memory": 2, "disks": 2 },
+  "Standard_F2": { "cores": 2, "memory": 4, "disks": 4 },
+  "Standard_F4": { "cores": 4, "memory": 8, "disks": 8 },
+  "Standard_F8": { "cores": 8, "memory": 16, "disks": 16 },
+  "Standard_F16": { "cores": 16, "memory": 32, "disks": 32 },
+
+  "Standard_F1s": { "cores": 1, "memory": 2, "disks": 2, "premiumStorage": true },
+  "Standard_F2s": { "cores": 2, "memory": 4, "disks": 4, "premiumStorage": true },
+  "Standard_F4s": { "cores": 4, "memory": 8, "disks": 8, "premiumStorage": true },
+  "Standard_F8s": { "cores": 8, "memory": 16, "disks": 16, "premiumStorage": true },
+  "Standard_F16s": { "cores": 16, "memory": 32, "disks": 32, "premiumStorage": true },
+  
+  "Standard_G1": { "cores": 2, "disks": 4 },
+  "Standard_G2": { "cores": 4, "disks": 8 },
+  "Standard_G3": { "cores": 8, "disks": 16 },
+  "Standard_G4": { "cores": 16, "disks": 32 },
+  "Standard_G5": { "cores": 32, "disks": 64 },
+  
+  "Standard_GS1": { "cores": 2, "disks": 4, "premiumStorage": true },
+  "Standard_GS2": { "cores": 4, "disks": 8, "premiumStorage": true },
+  "Standard_GS3": { "cores": 8, "disks": 16, "premiumStorage": true },
+  "Standard_GS4": { "cores": 16, "disks": 32, "premiumStorage": true },
+  "Standard_GS5": { "cores": 32, "disks": 64, "premiumStorage": true },
+
+  "Standard_H8": { "cores": 8, "memory": 56, "disks": 16 },
+  "Standard_H16": { "cores": 16, "memory": 112, "disks": 32 },
+  "Standard_H8m": { "cores": 8, "memory": 112, "disks": 16 },
+  "Standard_H16m": { "cores": 16, "memory": 224, "disks": 32 },
+  "Standard_H16r": { "cores": 16, "memory": 112, "disks": 32 },
+  "Standard_H16mr": { "cores": 16, "memory": 224, "disks": 32 },
+
+  "Standard_L4s": { "cores": 4, "memory": 32, "disks": 8, "premiumStorage": true },
+  "Standard_L8s": { "cores": 8, "memory": 64, "disks": 16, "premiumStorage": true },
+  "Standard_L16s": { "cores": 16, "memory": 128, "disks": 32, "premiumStorage": true },
+  "Standard_L32s": { "cores": 32, "memory": 256, "disks": 64, "premiumStorage": true },
+
+  "Standard_A1": { "cores": 1, "memory": 1.75, "disks": 2 },
+  "Standard_A2": { "cores": 2, "memory": 3.5, "disks": 4 },
+  "Standard_A3": { "cores": 4, "memory": 7,  "disks": 8 },
+  "Standard_A4": { "cores": 8, "memory": 14, "disks": 16 },
+  "Standard_A5": { "cores": 2, "memory": 14, "disks": 4 },
+  "Standard_A6": { "cores": 4, "memory": 28, "disks": 8 },
+  "Standard_A7": { "cores": 8, "memory": 56, "disks": 16 },
+  "Standard_A8": { "cores": 8, "memory": 56, "disks": 16 },
+  "Standard_A9": { "cores": 16, "memory": 112, "disks": 16 },
+  "Standard_A10": { "cores": 8, "memory": 56, "disks": 16 },
+  "Standard_A11": { "cores": 16,"memory": 112, "disks": 16 },
+
+  "Standard_D1": { "cores": 1, "memory": 3.5, "disks": 2 },
+  "Standard_D2": { "cores": 2, "memory": 7, "disks": 4 },
+  "Standard_D3": { "cores": 4, "memory": 14, "disks": 8 },
+  "Standard_D4": { "cores": 8, "memory": 28, "disks": 16 },
+  "Standard_D11": { "cores": 2, "memory": 14, "disks": 4 },
+  "Standard_D12": { "cores": 4, "memory": 28, "disks": 8 },
+  "Standard_D13": { "cores": 8, "memory": 56, "disks": 16 },
+  "Standard_D14": { "cores": 16, "memory": 112, "disks": 32 },
+
+  "Standard_DS1": { "cores": 1, "memory": 3.5, "disks": 2, "premiumStorage": true },
+  "Standard_DS2": { "cores": 2, "memory": 7, "disks": 4, "premiumStorage": true },
+  "Standard_DS3": { "cores": 4, "memory": 14, "disks": 8, "premiumStorage": true },
+  "Standard_DS4": { "cores": 8, "memory": 28, "disks": 16, "premiumStorage": true },
+  "Standard_DS11": { "cores": 2, "memory": 14, "disks": 4, "premiumStorage": true },
+  "Standard_DS12": { "cores": 4, "memory": 28, "disks": 8, "premiumStorage": true },
+  "Standard_DS13": { "cores": 8, "memory": 56, "disks": 16, "premiumStorage": true },
+  "Standard_DS14": { "cores": 16, "memory": 112, "disks": 32, "premiumStorage": true }
+}
+},{}],6:[function(require,module,exports){
+module.exports={
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D1_v2",
       "metadata": {
         "description": "Instance size for the VMs"
       }
@@ -465,244 +1013,9 @@ module.exports={
   ]
 }
 
-},{}],2:[function(require,module,exports){
-// Main application
-
-'use strict'
-
-var forms = require('./forms.source.js')
-var cloudConfig = require('./cloud-config.source.js')
-var arm = require('./arm.source.js')
-
-$(document).ready(function() {
-    // Hide the output panel
-    $('[gen-role="page"][gen-page="output"]').hide()
-    
-    // Restart button action
-    $('[gen-role="restart-button"]').on('click', function() {
-        $('[gen-role="page"]').show()
-            .filter('[gen-page="output"]').hide()
-    })
-    
-    // Form mode: prepare, and set default to Azure Resource Manager template
-    forms.prepareFormMode()
-    forms.setFormMode('arm')
-    
-    // Populate all node sizes in the select and bind action to change event to populate data disk select
-    forms.nodeSize()
-    
-    // Callback to show output
-    var showOutput = function(armTemplate, yamlString, yamlB64) {
-        // Restore button
-        $('[gen-role="generate-button"]').prop('disabled', false).text('Generate')
-        
-        // Show the output panel
-        $('[gen-role="page"]').hide()
-            .filter('[gen-page="output"]').show()
-        
-        // Azure Resource Manager template
-        if(armTemplate) {
-            $('[gen-role="output"][gen-content="arm"]').show()
-            $('[gen-role="output"][gen-content="arm"] code').text(armTemplate)
-        }
-        else {
-            $('[gen-role="output"][gen-content="arm"]').hide()
-        }
-        
-        // cloud-config.yaml
-        $('[gen-role="output"][gen-content="yaml"] code').text(yamlString)
-        $('[gen-role="output"][gen-content="yamlb64"] code').text(yamlB64)
-        
-        // Highlight syntax
-        $('pre code').each(function(i, block) {
-            hljs.highlightBlock(block)
-        })
-    }
-    
-    // Bind to form submit action
-    forms.formSubmit(function(formValues) {
-        // Generate the cloud-config.yaml file
-        cloudConfig(formValues, function(yamlString, yamlB64) {
-            // Generate the Azure Resource Manager template if needed
-            var armTemplate = false
-            if(formValues.mode == 'arm') {
-                armTemplate = arm(formValues, yamlB64)
-            }
-            
-            // Show output
-            showOutput(armTemplate, yamlString, yamlB64)
-        })
-    }, function() {
-        // Disable button on click
-        $('[gen-role="generate-button"]').prop('disabled', true).text('Generating… Please wait')
-    })
-})
-
-},{"./arm.source.js":3,"./cloud-config.source.js":6,"./forms.source.js":8}],3:[function(require,module,exports){
-'use strict'
-
-var template = require('../azuredeploy.json')
-var dataDiskTemplate = require('./data-disk.json')
-var storageAccountTemplate = require('./storage-account.json')
-
-// Generate Azure Resource Manager template
-module.exports = function(formValues, yamlB64) {
-    var result = JSON.parse(JSON.stringify(template))
-    
-    // Node size
-    result.parameters.vmSize.defaultValue = formValues.nodeSize
-    
-    // Node count
-    result.parameters.numberOfNodes.defaultValue = formValues.nodeCount
-    
-    // Storage account name prefix
-    result.parameters.storageAccountNamePrefix.defaultValue = formValues.storageAccountPrefix
-    
-    // Admin username
-    result.parameters.adminUserName.defaultValue = formValues.adminUsername
-    
-    // SSH key
-    result.parameters.sshKeyData.defaultValue = formValues.sshKey
-    
-    // cloud-config.yaml (base64)
-    result.parameters.cloudConfig.defaultValue = yamlB64
-    
-    // Data disks: create a storage account per each node, since each account can hold 40 VHDs
-    result.resources.push(JSON.parse(JSON.stringify(storageAccountTemplate)))
-    
-    // Add the disks to the VM resource
-    for(var i = 0; i < result.resources.length; i++) {
-        var res = result.resources[i]
-        if(res && res.type && res.type == 'Microsoft.Compute/virtualMachines') {
-            // Dependency on the storage accounts
-            if(!res.dependsOn) {
-                res.dependsOn = []
-            }
-            res.dependsOn.push("[concat('Microsoft.Storage/storageAccounts/', toLower( concat( parameters('storageAccountNamePrefix'), 'vhd', copyindex(), uniqueString(resourceGroup().id) ) ) )]")
-            
-            // Attach data disks
-            //console.log(res.properties.storageProfile)
-            if(!res.properties.storageProfile.dataDisks) {
-                res.properties.storageProfile.dataDisks = []
-            }
-            var dataDisks = res.properties.storageProfile.dataDisks
-            for(var lun = 0; lun < formValues.dataDisks; lun++) {
-                var attach = JSON.parse(JSON.stringify(dataDiskTemplate))
-                attach.name = attach.name.replace('*', lun)
-                attach.lun = lun
-                attach.vhd.uri = attach.vhd.uri.replace('*', lun)
-                dataDisks.push(attach)
-            }
-            
-            break
-        }
-    }
-    
-    // Return JSON string
-    return JSON.stringify(result, false, 2)
-}
-
-},{"../azuredeploy.json":1,"./data-disk.json":7,"./storage-account.json":9}],4:[function(require,module,exports){
-module.exports={
-  "Standard_A1_v2": { "cores": 1, "memory": 2, "disks": 2 },
-  "Standard_A2_v2": { "cores": 2, "memory": 4, "disks": 4 },
-  "Standard_A4_v2": { "cores": 4, "memory": 8, "disks": 8 },
-  "Standard_A8_v2": { "cores": 8, "memory": 16, "disks": 16 },
-  "Standard_A2m_v2": { "cores": 2, "memory": 16, "disks": 2 },
-  "Standard_A4m_v2": { "cores": 4, "memory": 32, "disks": 4 },
-  "Standard_A8m_v2": { "cores": 8, "memory": 64, "disks": 16 },
-  
-  "Standard_D1_v2": { "cores": 1, "memory": 3.5, "disks": 2 },
-  "Standard_D2_v2": { "cores": 2, "memory": 7, "disks": 4 },
-  "Standard_D3_v2": { "cores": 4, "memory": 14, "disks": 8 },
-  "Standard_D4_v2": { "cores": 8, "memory": 28, "disks": 16 },
-  "Standard_D5_v2": { "cores": 16, "memory": 56, "disks": 32 },
-  "Standard_D11_v2": { "cores": 2, "memory": 14, "disks": 4 },
-  "Standard_D12_v2": { "cores": 4, "memory": 28, "disks": 8 },
-  "Standard_D13_v2": { "cores": 8, "memory": 56, "disks": 16 },
-  "Standard_D14_v2": { "cores": 16, "memory": 112, "disks": 32 },
-  "Standard_D15_v2": { "cores": 20, "memory": 140, "disks": 40 },
-  
-  "Standard_DS1_v2": { "cores": 1, "memory": 3.5, "disks": 2, "premiumStorage": true },
-  "Standard_DS2_v2": { "cores": 2, "memory": 7, "disks": 4, "premiumStorage": true },
-  "Standard_DS3_v2": { "cores": 4, "memory": 14, "disks": 8, "premiumStorage": true },
-  "Standard_DS4_v2": { "cores": 8, "memory": 28, "disks": 16, "premiumStorage": true },
-  "Standard_DS5_v2": { "cores": 16, "memory": 56, "disks": 32, "premiumStorage": true },
-  "Standard_DS11_v2": { "cores": 2, "memory": 14, "disks": 4, "premiumStorage": true },
-  "Standard_DS12_v2": { "cores": 4, "memory": 28, "disks": 8, "premiumStorage": true },
-  "Standard_DS13_v2": { "cores": 8, "memory": 56, "disks": 16, "premiumStorage": true },
-  "Standard_DS14_v2": { "cores": 16, "memory": 112, "disks": 32, "premiumStorage": true },
-  "Standard_DS15_v2": { "cores": 20, "memory": 140, "disks": 40, "premiumStorage": true },
-
-  "Standard_F1": { "cores": 1, "memory": 2, "disks": 2 },
-  "Standard_F2": { "cores": 2, "memory": 4, "disks": 4 },
-  "Standard_F4": { "cores": 4, "memory": 8, "disks": 8 },
-  "Standard_F8": { "cores": 8, "memory": 16, "disks": 16 },
-  "Standard_F16": { "cores": 16, "memory": 32, "disks": 32 },
-
-  "Standard_F1s": { "cores": 1, "memory": 2, "disks": 2, "premiumStorage": true },
-  "Standard_F2s": { "cores": 2, "memory": 4, "disks": 4, "premiumStorage": true },
-  "Standard_F4s": { "cores": 4, "memory": 8, "disks": 8, "premiumStorage": true },
-  "Standard_F8s": { "cores": 8, "memory": 16, "disks": 16, "premiumStorage": true },
-  "Standard_F16s": { "cores": 16, "memory": 32, "disks": 32, "premiumStorage": true },
-  
-  "Standard_G1": { "cores": 2, "disks": 4 },
-  "Standard_G2": { "cores": 4, "disks": 8 },
-  "Standard_G3": { "cores": 8, "disks": 16 },
-  "Standard_G4": { "cores": 16, "disks": 32 },
-  "Standard_G5": { "cores": 32, "disks": 64 },
-  
-  "Standard_GS1": { "cores": 2, "disks": 4, "premiumStorage": true },
-  "Standard_GS2": { "cores": 4, "disks": 8, "premiumStorage": true },
-  "Standard_GS3": { "cores": 8, "disks": 16, "premiumStorage": true },
-  "Standard_GS4": { "cores": 16, "disks": 32, "premiumStorage": true },
-  "Standard_GS5": { "cores": 32, "disks": 64, "premiumStorage": true },
-
-  "Standard_H8": { "cores": 8, "memory": 56, "disks": 16 },
-  "Standard_H16": { "cores": 16, "memory": 112, "disks": 32 },
-  "Standard_H8m": { "cores": 8, "memory": 112, "disks": 16 },
-  "Standard_H16m": { "cores": 16, "memory": 224, "disks": 32 },
-  "Standard_H16r": { "cores": 16, "memory": 112, "disks": 32 },
-  "Standard_H16mr": { "cores": 16, "memory": 224, "disks": 32 },
-
-  "Standard_L4s": { "cores": 4, "memory": 32, "disks": 8, "premiumStorage": true },
-  "Standard_L8s": { "cores": 8, "memory": 64, "disks": 16, "premiumStorage": true },
-  "Standard_L16s": { "cores": 16, "memory": 128, "disks": 32, "premiumStorage": true },
-  "Standard_L32s": { "cores": 32, "memory": 256, "disks": 64, "premiumStorage": true },
-
-  "Standard_A1": { "cores": 1, "memory": 1.75, "disks": 2 },
-  "Standard_A2": { "cores": 2, "memory": 3.5, "disks": 4 },
-  "Standard_A3": { "cores": 4, "memory": 7,  "disks": 8 },
-  "Standard_A4": { "cores": 8, "memory": 14, "disks": 16 },
-  "Standard_A5": { "cores": 2, "memory": 14, "disks": 4 },
-  "Standard_A6": { "cores": 4, "memory": 28, "disks": 8 },
-  "Standard_A7": { "cores": 8, "memory": 56, "disks": 16 },
-  "Standard_A8": { "cores": 8, "memory": 56, "disks": 16 },
-  "Standard_A9": { "cores": 16, "memory": 112, "disks": 16 },
-  "Standard_A10": { "cores": 8, "memory": 56, "disks": 16 },
-  "Standard_A11": { "cores": 16,"memory": 112, "disks": 16 },
-
-  "Standard_D1": { "cores": 1, "memory": 3.5, "disks": 2 },
-  "Standard_D2": { "cores": 2, "memory": 7, "disks": 4 },
-  "Standard_D3": { "cores": 4, "memory": 14, "disks": 8 },
-  "Standard_D4": { "cores": 8, "memory": 28, "disks": 16 },
-  "Standard_D11": { "cores": 2, "memory": 14, "disks": 4 },
-  "Standard_D12": { "cores": 4, "memory": 28, "disks": 8 },
-  "Standard_D13": { "cores": 8, "memory": 56, "disks": 16 },
-  "Standard_D14": { "cores": 16, "memory": 112, "disks": 32 },
-
-  "Standard_DS1": { "cores": 1, "memory": 3.5, "disks": 2, "premiumStorage": true },
-  "Standard_DS2": { "cores": 2, "memory": 7, "disks": 4, "premiumStorage": true },
-  "Standard_DS3": { "cores": 4, "memory": 14, "disks": 8, "premiumStorage": true },
-  "Standard_DS4": { "cores": 8, "memory": 28, "disks": 16, "premiumStorage": true },
-  "Standard_DS11": { "cores": 2, "memory": 14, "disks": 4, "premiumStorage": true },
-  "Standard_DS12": { "cores": 4, "memory": 28, "disks": 8, "premiumStorage": true },
-  "Standard_DS13": { "cores": 8, "memory": 56, "disks": 16, "premiumStorage": true },
-  "Standard_DS14": { "cores": 16, "memory": 112, "disks": 32, "premiumStorage": true }
-}
-},{}],5:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 module.exports={"create-raid-array.service":"[Unit]\nDescription=Create RAID array on data disks\n\nBefore=mnt-data.mount\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/bash /opt/bin/create-raid-array.sh\n\n[Install]\nWantedBy=multi-user.target\nRequiredBy=mnt-data.mount\n","create-raid-array.sh":"#!/bin/bash\n\necho \"create-raid-array.sh started\"\n\n# Execute this only if the md0 raid array doesn't exist already\nlsblk | grep \\\\-md0\nif [ $? -ne 0 ]; then\n\necho \"Need to create raid array\"\n\n# List disks that need to be formatted\nDISKS=$(lsblk | awk '/^sd/ { a[$1] = 1 } /^.-/ { sub(/[`|]-/, \"\", $1) ; sub(/[0-9]/, \"\", $1) ; a[$1] = 0 } END { for(x in a) { if(a[x]) { print x }} } ')\nCOUNT=$(echo $DISKS | wc -w)\n\necho \"$COUNT disks: $DISKS \\nRun fdisk\"\n\n# Format all disks\nfor i in $DISKS; do\necho \"n\np\n1\n\n\nt\nfd\nw\n\" | fdisk \"/dev/$i\"; done\n\n# Create the raid array md0\nPARTITIONS=\"\"\nfor i in $DISKS; do\n    PARTITIONS+=\"/dev/${i}1 \"\ndone\necho \"Run mdadm on $PARTITIONS\"\nmdadm --create /dev/md0 --level 0 --raid-devices $COUNT $PARTITIONS\n\n# Crete an ext4 partition on md0\necho \"Create ext4 volume\"\n# TODO: Test this: \"-E lazy_itable_init\"\nmkfs -t ext4 /dev/md0\n\necho \"Done!\"\n\n# If md0 exists already\nelse\n\necho \"Raid array created already. Nothing to do here\"\n\nfi\n","docker-mariadb-galera.service":"[Unit]\nDescription=MariaDB with Galera Cluster\n\nRequires=docker.service\nWants=network-online.target\nAfter=docker.service network-online.target\n\n[Service]\nRestart=always\nRestartSec=3\nTimeoutStartSec=0\n\nExecStartPre=/usr/bin/chmod +x /opt/bin/docker-mariadb-galera.sh\nExecStart=/opt/bin/docker-mariadb-galera.sh\n\nExecStop=/bin/bash -c \" \\\n  HOSTNAME=$(/bin/hostname) \\\n  HOSTNUM=$(/bin/expr $HOSTNAME : '.*\\\\([0-9]\\\\)') \\\n  /usr/bin/docker stop mariadb-container-$HOSTNUM || true \\\n  /usr/bin/docker rm mariadb-container-$HOSTNUM || true \\\n\"\n\n[Install]\nWantedBy=multi-user.target\n","docker-mariadb-galera.sh":"#!/bin/sh\n\n# Parameters\nDATA_DIR=\"/mnt/data\"\nIMAGE_NAME=\"mariadb:10.1\"\n\n# Get the hostname of the VM\nHOSTNAME=$(hostname)\n\n# Get the ID of the VM from the hostname (single-digit)\nHOSTNUM=$(expr \"$HOSTNAME\" : '.*\\([0-9]\\)')\n\n# Get the IP of the eth0 interface\nHOSTIP=$(ip -4 addr ls eth0 | awk '/inet / {print $2}' | cut -d\"/\" -f1)\n\n# Ensure the folder for MariaDB exists\nmkdir -p $DATA_DIR\n\n# Remove pre-existing containers\ndocker kill mariadb-container-$HOSTNUM || true\ndocker rm mariadb-container-$HOSTNUM || true\n\n# Pull the latest version of the Docker image\ndocker pull $IMAGE_NAME\n\n# Check if the cluster is marked as initialized\ncurl --silent --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized > /dev/null\nif [ $? -ne 0 ]; then\n    echo \"Cluster needs to be initialized\"\n    \n    # Check if this is the first VM (hostname ends in \"node-0\") that will initialize the cluster\n    if [[ \"$HOSTNAME\" == *node-0 ]]; then\n        echo \"VM $HOSTNAME is the first node ($HOSTIP)\"\n        \n        # Start the Docker container\n        echo \"Starting Docker container (first node)\"\n        \n        docker run \\\n          --name mariadb-container-$HOSTNUM \\\n          -v /opt/mysql.conf.d:/etc/mysql/conf.d \\\n          -v $DATA_DIR:/var/lib/mysql \\\n          -e MYSQL_INITDB_SKIP_TZINFO=yes \\\n          -e MYSQL_ROOT_PASSWORD=my-secret-pw \\\n          -p 3306:3306 \\\n          -p 4567:4567/udp \\\n          -p 4567-4568:4567-4568 \\\n          -p 4444:4444 \\\n          $IMAGE_NAME \\\n          --wsrep-new-cluster \\\n          --wsrep_node_address=$HOSTIP\n    else\n        echo \"This is not the first node: $HOSTNAME ($HOSTIP)\"\n        \n        # Wait for the cluster to be initialized\n        until curl --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized; do\n          echo \"Waiting for initialization...\"\n          sleep 2\n        done\n        \n        # Touch the mysql data folder so the database is not re-initialized\n        mkdir -p $DATA_DIR/mysql\n        \n        # Start container\n        echo \"Starting Docker container\"\n        docker run \\\n          --name mariadb-container-$HOSTNUM \\\n          -v /opt/mysql.conf.d:/etc/mysql/conf.d \\\n          -v $DATA_DIR:/var/lib/mysql \\\n          -p 3306:3306 \\\n          -p 4567:4567/udp \\\n          -p 4567-4568:4567-4568 \\\n          -p 4444:4444 \\\n          $IMAGE_NAME \\\n          --wsrep_node_address=$HOSTIP\n    fi\nelse\n    echo \"Cluster is already initialized. Node: $HOSTNAME ($HOSTIP)\"\n    \n    echo \"Starting Docker container\"\n    docker run \\\n      --name mariadb-container-$HOSTNUM \\\n      -v /opt/mysql.conf.d:/etc/mysql/conf.d \\\n      -v $DATA_DIR:/var/lib/mysql \\\n      -p 3306:3306 \\\n      -p 4567:4567/udp \\\n      -p 4567-4568:4567-4568 \\\n      -p 4444:4444 \\\n      $IMAGE_NAME \\\n      --wsrep_node_address=$HOSTIP\nfi\n","docker-mariadb-waiter.service":"[Unit]\nDescription=Wait for MariaDB to be initialized, then update status in etcd\n\nRequires=docker.service docker-mariadb-galera.service\nWants=network-online.target\nAfter=docker.service docker-mariadb-galera.service network-online.target\n\n[Service]\nType=simple\nRemainAfterExit=true\nExecStartPre=/usr/bin/chmod +x /opt/bin/docker-mariadb-waiter.sh\nExecStart=/usr/bin/bash /opt/bin/docker-mariadb-waiter.sh\n\n[Install]\nWantedBy=multi-user.target\n","docker-mariadb-waiter.sh":"#!/bin/sh\n\n# This script updates the status in etcd only after MariaDB is actually initialized and ready to accept connections\n\n# Parameters\nIMAGE_NAME=\"mariadb:10.1\"\n\n# Check if the cluster is marked as initialized. If it's already initialized, then just exit successfully\ncurl --silent --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized > /dev/null\nif [ $? -ne 0 ]; then\n    sleep 10\n    \n    while ! docker run --rm $IMAGE_NAME mysqladmin ping -h mariadb-node-0 --silent; do\n        sleep 5\n    done\n    \n    # Wait 5 more seconds before sending the green light\n    sleep 5\n    \n    # Server is ready: other nodes can now connect\n    curl -L http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized -XPUT -d value=\"true\"\nfi\n","etcd-waiter.service":"[Unit]\nDescription=Wait for etcd2 to be online\n\nWants=network-online.target etcd2.service\nAfter=network-online.target etcd2.service\nBefore=docker.service fleet.service\n\n[Service]\nType=oneshot\nRemainAfterExit=true\nExecStartPre=/usr/bin/chmod +x /opt/bin/etcd-waiter.sh\nExecStart=/usr/bin/bash /opt/bin/etcd-waiter.sh\n\n[Install]\nRequiredBy=docker.service\n","etcd-waiter.sh":"#! /usr/bin/bash\nuntil curl http://127.0.0.1:4001/v2/machines; do sleep 2; done\n","mnt-data.mount":"[Unit]\nDescription=Mount RAID array in /mnt/data\n\nRequires=create-raid-array.service\nAfter=create-raid-array.service\nBefore=docker-mariadb-galera.service\n\n[Mount]\nWhat=/dev/md0\nWhere=/mnt/data\nType=ext4\n\n[Install]\nRequiredBy=docker-mariadb-galera.service\n","mysql_server.cnf":"[server]\nbind-address=0.0.0.0\nbinlog_format=row\ndefault_storage_engine=InnoDB\ninnodb_autoinc_lock_mode=2\ninnodb_locks_unsafe_for_binlog=1\nquery_cache_size=0\nquery_cache_type=0\n\n[galera]\nwsrep_on=ON\nwsrep_provider=\"/usr/lib/galera/libgalera_smm.so\"\nwsrep_cluster_address=\"gcomm://mariadb-node-0,mariadb-node-1,mariadb-node-2,mariadb-node-3,mariadb-node-4\"\nwsrep-sst-method=rsync\n\n# Optional setting\nwsrep_slave_threads={WSREP_SLAVE_THREADS}\n#innodb_flush_log_at_trx_commit=0\n"}
-},{}],6:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 'use strict'
 
 var pack = require('./cloud-config.pack.json')
@@ -813,7 +1126,16 @@ var buildYaml = function(formValues, done) {
 
 module.exports = cloudConfig
 
-},{"./azure-vm-sizes.json":4,"./cloud-config.pack.json":5,"./yaml-arm.source.js":10,"./yaml.source.js":11}],7:[function(require,module,exports){
+},{"./azure-vm-sizes.json":5,"./cloud-config.pack.json":7,"./yaml-arm.source.js":13,"./yaml.source.js":14}],9:[function(require,module,exports){
+module.exports={
+	"name": "DataDisk*",
+	"diskSizeGB": "1023",
+	"lun": 0,
+	"caching": "None",
+	"createOption": "Empty"
+}
+
+},{}],10:[function(require,module,exports){
 module.exports={
 	"name": "DataDisk*",
 	"diskSizeGB": "1023",
@@ -825,10 +1147,11 @@ module.exports={
 	"createOption": "Empty"
 }
 
-},{}],8:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict'
 
 var azureVMSizes = require('./azure-vm-sizes.json')
+var azureManagedDisks = require('./azure-managed-disks.json')
 
 var formMode = false
 
@@ -896,6 +1219,58 @@ var nodeSize = function() {
     
     // Initial population of data disk count
     dataDiskUpdate($nodeSizeSelect.val())
+}
+
+var diskTypeUpdate = function(diskType) {
+    // Check if disk is managed or unmanaged
+    var isManaged = (diskType != 'unmanaged-standard')
+
+    // Show or hide storage account prefix field
+    if(isManaged) {
+        $('#storage-account-prefix-container').hide()
+    }
+    else {
+        $('#storage-account-prefix-container').show()
+    }
+
+    // Update the IOPS label
+    var iops
+    if(isManaged) {
+        iops = azureManagedDisks[diskType].iops
+    }
+    else {
+        iops = 500
+    }
+    $('#iops').text(iops)
+}
+
+var managedDiskSizes = function() {
+    // Populate all managed disk sizes
+    var $diskType = $('#disk-type')
+    var $list = $('#managed-disk-list')
+    for(var k in azureManagedDisks) {
+        if(azureManagedDisks.hasOwnProperty(k)) {
+            var label = azureManagedDisks[k].sku
+            if(azureManagedDisks[k].type == 'premium') {
+                label += ' Premium'
+            }
+            else {
+                label += ' Standard'
+            }
+
+            label += ' ('+azureManagedDisks[k].size+' GB)'
+
+            $list.append('<option value="'+k+'">'+label+'</option>')
+        }
+    }
+
+    // Bind action to change event
+    $diskType.on('change', function() {
+        diskTypeUpdate($diskType.val())
+    })
+    
+    // Initial action
+    diskTypeUpdate($diskType.val())
 }
 
 var formSubmit = function(done, click) {
@@ -1011,10 +1386,11 @@ module.exports = {
     prepareFormMode: prepareFormMode,
     setFormMode: setFormMode,
     nodeSize: nodeSize,
+    managedDiskSizes: managedDiskSizes,
     formSubmit: formSubmit
 }
 
-},{"./azure-vm-sizes.json":4}],9:[function(require,module,exports){
+},{"./azure-managed-disks.json":3,"./azure-vm-sizes.json":5}],12:[function(require,module,exports){
 module.exports={
 	"apiVersion": "2015-06-15",
 	"type": "Microsoft.Storage/storageAccounts",
@@ -1028,7 +1404,7 @@ module.exports={
 		"accountType": "[variables('vhdStorageAccountType')]"
 	}
 }
-},{}],10:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict'
 
 // Source for the cloud-config.yaml file
@@ -1093,7 +1469,7 @@ module.exports = {
     ]
 }
 
-},{}],11:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 'use strict'
 
 // Source for the cloud-config.yaml file
@@ -1151,7 +1527,7 @@ module.exports = {
     ]
 }
 
-},{}]},{},[2]);
+},{}]},{},[1]);
 </script>
 
 <!-- highlight.js -->

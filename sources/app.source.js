@@ -21,7 +21,11 @@ $(document).ready(function() {
     forms.setFormMode('arm')
     
     // Populate all node sizes in the select and bind action to change event to populate data disk select
+    // Note: this must run before forms.managedDiskSizes()
     forms.nodeSize()
+
+    // Populate managed disk sizes
+    forms.managedDiskSizes()
     
     // Callback to show output
     var showOutput = function(armTemplate, yamlString, yamlB64) {
