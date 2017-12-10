@@ -1,5 +1,6 @@
 'use strict'
 
+var forms = require('./forms.source.js')
 var pack = require('./cloud-config.pack.json')
 var yamlSource = require('./yaml.source.js')
 var yamlARMSource = require('./yaml-arm.source.js')
@@ -16,16 +17,26 @@ var cloudConfig = function(formValues, done) {
     if(!formValues.discoveryUrl) {
         // Need to request discovery url from https://discovery.etcd.io/new?size=X
         var nodes = formValues.nodeCount || formValues.etcdNodeCount
-        $.get(corsProxyUrl + 'https://discovery.etcd.io/new?size='+nodes+'&_='+Date.now(), function(result) {
-            // result should contain the etcd discovery url
-            if(!result || !result.match(/^https\:\/\/discovery\.etcd\.io\/[a-f0-9]{32}$/)) {
-                alert('Invalid response from discovery.etcd.io')
-            }
-            else {
-                // Build YAML file
-                formValues.discoveryUrl = result
-                buildYaml(formValues, done)
-            }
+        $.ajax({
+            method: 'GET',
+            url: corsProxyUrl + 'https://discovery.etcd.io/new?size='+nodes+'&_='+Date.now(),
+            success: function(result) {
+                // result should contain the etcd discovery url
+                if(!result || !result.match(/^https\:\/\/discovery\.etcd\.io\/[a-f0-9]{32}$/)) {
+                    alert('Invalid response from discovery.etcd.io')
+                    forms.restoreButton()
+                }
+                else {
+                    // Build YAML file
+                    formValues.discoveryUrl = result
+                    buildYaml(formValues, done)
+                }
+            },
+            error: function(error) {
+                alert('Error while requesting etcd token - try requesting it manually from https://discovery.etcd.io/new?size=X')
+                forms.restoreButton()
+            },
+            timeout: 5000
         })
     }
     else {

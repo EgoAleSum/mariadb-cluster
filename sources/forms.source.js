@@ -190,9 +190,14 @@ var formSubmit = function(done, click) {
     })
 }
 
+var restoreButton = function() {
+    $('[gen-role="generate-button"]').prop('disabled', false).text('Generate')
+}
+
 module.exports = {
     prepareFormMode: prepareFormMode,
     setFormMode: setFormMode,
     nodeSize: nodeSize,
-    formSubmit: formSubmit
+    formSubmit: formSubmit,
+    restoreButton: restoreButton
 }
