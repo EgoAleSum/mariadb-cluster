@@ -7,28 +7,28 @@ var storageAccountTemplate = require('./templates/storage-account.template.json'
 // Generate Azure Resource Manager template
 module.exports = function(formValues, yamlB64) {
     var result = JSON.parse(JSON.stringify(template))
-    
+
     // Node size
-    result.parameters.vmSize.defaultValue = formValues.nodeSize
-    
+    result.variables.vmSize = formValues.nodeSize
+
     // Node count
-    result.parameters.numberOfNodes.defaultValue = formValues.nodeCount
-    
+    result.variables.numberOfNodes = formValues.nodeCount
+
     // Storage account name prefix
-    result.parameters.storageAccountNamePrefix.defaultValue = formValues.storageAccountPrefix
-    
+    result.variables.storageAccountNamePrefix = formValues.storageAccountPrefix
+
     // Admin username
-    result.parameters.adminUserName.defaultValue = formValues.adminUsername
-    
+    result.variables.adminUserName = formValues.adminUsername
+
     // SSH key
-    result.parameters.sshKeyData.defaultValue = formValues.sshKey
-    
+    result.variables.sshKeyData = formValues.sshKey
+
     // cloud-config.yaml (base64)
-    result.parameters.cloudConfig.defaultValue = yamlB64
-    
+    result.variables.cloudConfig = yamlB64
+
     // Data disks: create a storage account per each node, since each account can hold 40 VHDs
     result.resources.push(JSON.parse(JSON.stringify(storageAccountTemplate)))
-    
+
     // Add the disks to the VM resource
     for(var i = 0; i < result.resources.length; i++) {
         var res = result.resources[i]
@@ -37,8 +37,8 @@ module.exports = function(formValues, yamlB64) {
             if(!res.dependsOn) {
                 res.dependsOn = []
             }
-            res.dependsOn.push("[concat('Microsoft.Storage/storageAccounts/', toLower( concat( copyindex(), parameters('storageAccountNamePrefix'), 'vhd', uniqueString(resourceGroup().id) ) ) )]")
-            
+            res.dependsOn.push("[concat('Microsoft.Storage/storageAccounts/', toLower( concat( copyindex(), variables('storageAccountNamePrefix'), 'vhd', uniqueString(resourceGroup().id) ) ) )]")
+
             // Attach data disks
             //console.log(res.properties.storageProfile)
             if(!res.properties.storageProfile.dataDisks) {
@@ -52,11 +52,11 @@ module.exports = function(formValues, yamlB64) {
                 attach.vhd.uri = attach.vhd.uri.replace('*', lun)
                 dataDisks.push(attach)
             }
-            
+
             break
         }
     }
-    
+
     // Return JSON string
     return JSON.stringify(result, false, 2)
 }

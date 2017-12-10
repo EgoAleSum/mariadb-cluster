@@ -1,6 +1,8 @@
 {
     "files.exclude": {
-        "node_modules/": true
+        "node_modules/": true,
+        "sources/app.build.js": true,
+        "sources/cloud-config.pack.json": true
     },
     "files.trimTrailingWhitespace": true,
     "editor.tabSize": 4,

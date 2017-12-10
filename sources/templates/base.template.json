@@ -1,51 +1,13 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "parameters": {
-        "vmSize": {
-            "type": "string",
-            "defaultValue": "Standard_D1",
-            "metadata": {
-                "description": "Instance size for the VMs"
-            }
-        },
-        "storageAccountNamePrefix": {
-            "type": "string",
-            "maxLength": 7,
-            "metadata": {
-                "description": "Name prefix for the storage accounts"
-            }
-        },
-        "numberOfNodes": {
-            "type": "int",
-            "defaultValue": 3,
-            "minValue": 3,
-            "maxValue": 5, 
-            "metadata": {
-                "description": "Number of nodes to create"
-            }
-        },
-        "adminUserName": {
-            "type": "string",
-            "defaultValue": "core",
-            "metadata": {
-                "description": "Username to login to the VMs"
-            }
-        },
-        "sshKeyData": {
-            "type": "string",
-            "metadata": {
-                "description": "Public key for SSH authentication"
-            }
-        },
-        "cloudConfig": {
-            "type": "string",
-            "metadata": {
-                "description": "Base64-encoded cloud-config.yaml file"
-            }
-        }
-    },
     "variables": {
+        "vmSize": "",
+        "storageAccountNamePrefix": "",
+        "numberOfNodes": 0,
+        "adminUserName": "",
+        "sshKeyData": "",
+        "cloudConfig": "",
         "securityGroupName": "mariadb-nsg",
         "virtualNetworkName": "[concat( resourceGroup().name, '-VNet' )]",
         "addressPrefix": "10.0.0.0/16",
@@ -56,11 +18,11 @@
         "osImageSku": "Stable",
         "nicNamePrefix": "mariadb-nic-",
         "availabilitySetName": "mariadb-as",
-        "vhdStorageAccountName": "[toLower( concat( parameters('storageAccountNamePrefix'), 'vhdo', uniqueString(resourceGroup().id) ) )]",
+        "vhdStorageAccountName": "[toLower( concat( variables('storageAccountNamePrefix'), 'vhdo', uniqueString(resourceGroup().id) ) )]",
         "vhdStorageAccountType": "Standard_LRS",
-        "diagStorageAccountName": "[toLower( concat( parameters('storageAccountNamePrefix'), 'diag', uniqueString(resourceGroup().id) ) )]",
+        "diagStorageAccountName": "[toLower( concat( variables('storageAccountNamePrefix'), 'diag', uniqueString(resourceGroup().id) ) )]",
         "diagStorageAccountType": "Standard_LRS",
-        "sshKeyPath": "[concat('/home/', parameters('adminUsername'),'/.ssh/authorized_keys')]",
+        "sshKeyPath": "[concat('/home/', variables('adminUsername'),'/.ssh/authorized_keys')]",
         "loadBalancerIp": "10.0.1.4",
         "loadBalancerName": "mariadb-lb",
         "backendPoolName": "BackendPoolMySQL",
@@ -153,7 +115,7 @@
             "name": "[concat(variables('nicNamePrefix'), copyindex())]",
             "copy": {
                 "name": "nicLoop",
-                "count": "[parameters('numberOfNodes')]"
+                "count": "[variables('numberOfNodes')]"
             },
             "location": "[resourceGroup().location]",
             "dependsOn": [
@@ -254,7 +216,7 @@
             "name": "[concat(variables('vmNamePrefix'), copyindex())]",
             "copy": {
                 "name": "vmLoop",
-                "count": "[parameters('numberOfNodes')]"
+                "count": "[variables('numberOfNodes')]"
             },
             "location": "[resourceGroup().location]",
             "dependsOn": [
@@ -268,19 +230,19 @@
                     "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('availabilitySetName'))]"
                 },
                 "hardwareProfile": {
-                    "vmSize": "[parameters('vmSize')]"
+                    "vmSize": "[variables('vmSize')]"
                 },
                 "osProfile": {
                     "computerName": "[concat(variables('vmNamePrefix'), copyindex())]",
-                    "adminUsername": "[parameters('adminUsername')]",
-                    "customData": "[parameters('cloudConfig')]",
+                    "adminUsername": "[variables('adminUsername')]",
+                    "customData": "[variables('cloudConfig')]",
                     "linuxConfiguration": {
                         "disablePasswordAuthentication": "true",
                         "ssh": {
                             "publicKeys": [
                                 {
                                     "path": "[variables('sshKeyPath')]",
-                                    "keyData": "[parameters('sshKeyData')]"
+                                    "keyData": "[variables('sshKeyData')]"
                                 }
                             ]
                         }
