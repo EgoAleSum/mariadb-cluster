@@ -2,7 +2,7 @@
 
 # Parameters
 DATA_DIR="/mnt/data"
-IMAGE_NAME="mariadb:10.1"
+IMAGE_NAME="mariadb:{MARIADB_VERSION}"
 
 # Get the hostname of the VM
 HOSTNAME=$(hostname)
@@ -27,14 +27,14 @@ docker pull $IMAGE_NAME
 curl --silent --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized > /dev/null
 if [ $? -ne 0 ]; then
     echo "Cluster needs to be initialized"
-    
+
     # Check if this is the first VM (hostname ends in "node-0") that will initialize the cluster
     if [[ "$HOSTNAME" == *node-0 ]]; then
         echo "VM $HOSTNAME is the first node ($HOSTIP)"
-        
+
         # Start the Docker container
         echo "Starting Docker container (first node)"
-        
+
         docker run \
           --name mariadb-container-$HOSTNUM \
           -v /opt/mysql.conf.d:/etc/mysql/conf.d \
@@ -50,16 +50,16 @@ if [ $? -ne 0 ]; then
           --wsrep_node_address=$HOSTIP
     else
         echo "This is not the first node: $HOSTNAME ($HOSTIP)"
-        
+
         # Wait for the cluster to be initialized
         until curl --fail http://127.0.0.1:4001/v2/keys/mariadb-galera/initialized; do
           echo "Waiting for initialization..."
           sleep 2
         done
-        
+
         # Touch the mysql data folder so the database is not re-initialized
         mkdir -p $DATA_DIR/mysql
-        
+
         # Start container
         echo "Starting Docker container"
         docker run \
@@ -75,7 +75,7 @@ if [ $? -ne 0 ]; then
     fi
 else
     echo "Cluster is already initialized. Node: $HOSTNAME ($HOSTIP)"
-    
+
     echo "Starting Docker container"
     docker run \
       --name mariadb-container-$HOSTNUM \

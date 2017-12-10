@@ -42,20 +42,20 @@ var cloudConfig = function(formValues, done) {
     else {
         // Go straight to building the YAML file
         buildYaml(formValues, done)
-    } 
+    }
 }
 
 // Build the cloud-config.yaml file
 var buildYaml = function(formValues, done) {
     // Select the proper template
     var template = (formValues.mode == 'arm') ? yamlARMSource : yamlSource
-    
+
     // Create the tree
     var yamlTree = JSON.parse(JSON.stringify(template.tree)) // Deep clone the object
-    
+
     // etcd2 discovery url
     yamlTree.coreos.etcd2.discovery = formValues.discoveryUrl
-    
+
     // Number of cores
     var vcpus = 0
     if(formValues.nodeSize) {
@@ -67,29 +67,32 @@ var buildYaml = function(formValues, done) {
     else if(formValues.vcpuCount) {
         vcpus = formValues.vcpuCount
     }
-    
+
     // Read files to be created and append the data to the yaml tree
     for(var k in template.readFiles) {
         if(template.readFiles.hasOwnProperty(k)) {
             var push = JSON.parse(JSON.stringify(template.readFiles[k])) // Deep clone the object
             push.content = pack[k]
-            
+
             if(k == 'mysql_server.cnf') {
                 push.content = push.content.replace('{WSREP_SLAVE_THREADS}', (2 * vcpus) || 1)
             }
-            
+            else if(k == 'docker-mariadb-galera.sh' || k == 'docker-mariadb-waiter.sh') {
+                push.content = push.content.replace('{MARIADB_VERSION}', formValues.mariaDBVersion)
+            }
+
             yamlTree.write_files.push(push)
         }
     }
-    
+
     // systemd units
     for(var i = 0, len = template.units.length; i < len; i++) {
         var unit = template.units[i]
-        
+
         var push = JSON.parse(JSON.stringify(unit)) // Deep clone the object
         delete push.source
         delete push['drop-ins-source']
-        
+
         if(unit['drop-ins-source']) {
             push['drop-ins'] = []
             for(var k in unit['drop-ins-source']) {
@@ -104,16 +107,16 @@ var buildYaml = function(formValues, done) {
         if(unit.source) {
             push.content = pack[unit.source]
         }
-        
+
         yamlTree.coreos.units.push(push)
     }
-    
+
     // Generate YAML document
     var yamlString = "#cloud-config\n\n" + jsyaml.safeDump(yamlTree, {lineWidth: -1})
-    
+
     // Convert to base64 (note: this does NOT support UTF-8)
     var yamlB64 = btoa(yamlString)
-    
+
     done(yamlString, yamlB64)
 }
 

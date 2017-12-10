@@ -44,7 +44,7 @@ var dataDiskUpdate = function(sizeName) {
     // Add options
     var $dataDiskSelect = $('#data-disks')
     $dataDiskSelect.empty()
-    for(var i = 1; i <= max; i++) {
+    for(var i = 2; i <= max; i++) {
         $dataDiskSelect.append('<option value="'+i+'">'+i+'</option>')
     }
     
@@ -163,6 +163,14 @@ var formSubmit = function(done, click) {
             }
         }
         
+        // MariaDB Version
+        var $mariaDBVersion = $('#mariadb-version', $form)
+        formValues.mariaDBVersion = ($mariaDBVersion.val() + '').trim()
+        if(!formValues.mariaDBVersion) {
+            $mariaDBVersion.parents('.form-group').addClass('has-error')
+            return false
+        }
+
         // etcd discovery URL
         var $discoveryUrl = $('#etcd-discovery-url', $form)
         formValues.discoveryUrl = ($discoveryUrl.val() + '').trim()
