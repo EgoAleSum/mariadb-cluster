@@ -5,10 +5,10 @@
   <meta content="IE=edge" http-equiv="X-UA-Compatible">
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
   <title>Template generator</title>
-  
+
   <!-- Bootstrap -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-  
+
   <!-- highlight.js -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
 </head>
@@ -18,14 +18,14 @@
     <div class="page-header">
       <h1>Template generator</h1>
     </div>
-    
+
     <form class="form-horizontal" id="generator-form">
       <h2>Mode</h2>
       <div>
         <span class="btn btn-default" gen-role="mode" gen-mode="arm">Azure Resource Manager template</span>
         <span class="btn btn-default" gen-role="mode" gen-mode="cloudconfig">Only cloud-config.yaml</span>
       </div>
-      
+
       <h2>Parameters</h2>
       <div class="form-group" gen-role="conditional-param" gen-mode="arm">
         <label for="node-count" class="col-sm-3 control-label">Number of nodes</label>
@@ -46,14 +46,14 @@
         <label for="data-disks" class="col-sm-3 control-label">Number of data disks per node</label>
         <div class="col-sm-3">
           <select name="data-disks" id="data-disks" class="form-control" required></select>
-          <div class="small help-block">Stripe across N data disks, each one with 4,095GB max size and 500 IOPs. Each VM size has a limit on number of data disks; please note that this setting may limit your ability to scale down a node.</div> 
+          <div class="small help-block">Stripe across N data disks, each one with 4,095GB max size and 500 IOPs. Each VM size has a limit on number of data disks; please note that this setting may limit your ability to scale down a node.</div>
         </div>
       </div>
       <div class="form-group" gen-role="conditional-param" gen-mode="arm">
         <label for="storage-account-prefix" class="col-sm-3 control-label">Storage Account name prefix</label>
         <div class="col-sm-3">
           <input name="storage-account-prefix" id="storage-account-prefix" class="form-control" required pattern="[0-9a-z]{1,7}" />
-          <div class="small help-block">Must be 1-7 characters, lowercase characters and numbers only</div> 
+          <div class="small help-block">Must be 1-7 characters, lowercase characters and numbers only</div>
         </div>
       </div>
       <div class="form-group" gen-role="conditional-param" gen-mode="arm">
@@ -67,7 +67,7 @@
         <label for="admin-username" class="col-sm-3 control-label">SSH user name</label>
         <div class="col-sm-3">
           <input name="admin-username" id="admin-username" class="form-control" required pattern="[a-z_][a-z0-9_-]*" value="core" />
-          <div class="small help-block">Lowercase characters, numbers and _- only. Must start with a character or underscore.</div> 
+          <div class="small help-block">Lowercase characters, numbers and _- only. Must start with a character or underscore.</div>
         </div>
       </div>
       <!--<div class="form-group" gen-role="conditional-param" gen-mode="arm">
@@ -90,7 +90,7 @@
         <label for="vcpu-count" class="col-sm-3 control-label">Number of vCPUs per VM</label>
         <div class="col-sm-3">
           <input name="vcpu-count" id="vcpu-count" class="form-control" required type="number" value="1" min="0" max="32" />
-          <div class="small help-block">Number of vCPUs in each VM, for optimizing <em>wsrep</em> slave threads. If unsure, set this value to 0 (will use 1 slave thread).</div> 
+          <div class="small help-block">Number of vCPUs in each VM, for optimizing <em>wsrep</em> slave threads. If unsure, set this value to 0 (will use 1 slave thread).</div>
         </div>
       </div>
       <div class="form-group">
@@ -103,16 +103,16 @@
           <div class="small help-block">You can pick a major version only; the Docker container will always pick the latest updates.</div>
         </div>
       </div>
-      
+
       <h2>Optional parameters</h2>
       <div class="form-group">
         <label for="etcd-discovery-url" class="col-sm-3 control-label">etcd2 discovery URL</label>
         <div class="col-sm-6">
           <input name="etcd-discovery-url" id="etcd-discovery-url" class="form-control" type="url" placeholder="https://discovery.etcd.io/abcdef1234567890abcdef1234567890" />
-          <div class="small help-block"><strong>Leave empty to generate automatically (recommended for new clusters).</strong> Can be obtained from <code>http://discovery.etcd.io/new?size=x</code> (replace "x" with the initial size of the etcd2 cluster, as necessary for bootstrapping).</div> 
+          <div class="small help-block"><strong>Leave empty to generate automatically (recommended for new clusters).</strong> Can be obtained from <code>http://discovery.etcd.io/new?size=x</code> (replace "x" with the initial size of the etcd2 cluster, as necessary for bootstrapping).</div>
         </div>
       </div>
-      
+
       <div class="form-group">
         <div class="col-sm-offset-3 col-sm-9">
           <button type="submit" class="btn btn-primary" gen-role="generate-button">Generate</button>
@@ -120,32 +120,38 @@
       </div>
     </form>
   </div>
-  
+
   <div class="container" gen-role="page" gen-page="output">
     <div class="page-header">
       <h1>Generated documents</h1>
     </div>
-    
+
     <button type="button" class="btn btn-default" gen-role="restart-button">Restart</button>
-    
+
     <div gen-role="output" gen-content="arm">
       <h2>Azure Resource Manager template</h2>
-      <pre><code class="json"></code></pre>
+      <button type="button" class="btn btn-default clipboard-btn" data-clipboard-target="#copy-arm">Copy</button>
+      <pre><code class="json" id="copy-arm"></code></pre>
     </div>
-    
+
     <div gen-role="output" gen-content="yaml">
       <h2>cloud-config.yaml</h2>
-      <pre><code class="yaml"></code></pre>
+      <button type="button" class="btn btn-default clipboard-btn" data-clipboard-target="#copy-yaml">Copy</button>
+      <pre><code class="yaml" id="copy-yaml"></code></pre>
     </div>
-    
+
     <div gen-role="output" gen-content="yamlb64">
       <h2>cloud-config.yaml (base64-encoded)</h2>
-      <pre><code class="nohighlight"></code></pre>
+      <button type="button" class="btn btn-default clipboard-btn" data-clipboard-target="#copy-yamlb64">Copy</button>
+      <pre><code class="nohighlight" id="copy-yamlb64"></code></pre>
     </div>
   </div>
-  
+
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
+<!-- Clipboard.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.7.1/clipboard.min.js"></script>
 
 <!-- build:script inline noprocess yaml -->
 <script type="text/javascript"></script>
