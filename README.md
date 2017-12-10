@@ -51,7 +51,7 @@ The default password for the `root` user in the database is **`my-secret-pw`**; 
 SET PASSWORD FOR 'root'@'%' = PASSWORD('newpass');
 ````
 
-Note: when using Galera Cluster, it's important not to edit the `mysql` system database, because those changes won't be replicated across the nodes. To edit users, leverage SQL statements such as `CREATE USER`, `SET PASSWORD`, etc; do not alter the `mysql.user` table directly. 
+Note: when using Galera Cluster, it's important not to edit the `mysql` system database, because those changes won't be replicated across the nodes. To edit users, leverage SQL statements such as `CREATE USER`, `SET PASSWORD`, etc; do not alter the `mysql.user` table directly.
 
 
 ## Using the Cloud Config mode
@@ -102,7 +102,7 @@ If you want to modify the generator app (for example because you want to alter t
 Structure of the repository:
 
 - The `generator.html` app is built from files in the `sources` folder.
-- Inside the source folder, the `cloud-config` directory contains the raw deployment scripts, systemd units and configuration files to be copied on the VMs. Those files are then merged in a single JSON document by Grunt at "compile time". 
+- Inside the source folder, the `cloud-config` directory contains the raw deployment scripts, systemd units and configuration files to be copied on the VMs. Those files are then merged in a single JSON document by Grunt at "compile time".
 - The entry-point for the JavaScript code is the `app.source.js` file. Using Browserify, Grunt merges all JavaScript code into `app.build.js`.
 - Lastly, Grunt inlines all JavaScript code inside the `generator.html` file using html-build. Please note that certain third-party dependencies, such as jQuery, Bootstrap and highlight.js, are linked externally (over the Internet).
 - Because the `discovery.etcd.io` service doesn't support CORS (see [this issue on GitHub](https://github.com/coreos/discovery.etcd.io/issues/12)), in order for the automatic generation of Discovery URLs to work we need to proxy the request. Without a backend server for the generator app, the best solution is to use a third-party service like [CrossOrigin.me](https://crossorigin.me/). etcd2 Discovery URLs aren't particularly sensitive information, so risks associated with using an external service are minimal. If you're concerned about security, you can deploy your own CORS proxy using the open source CrossOrigin.me code on your own machines, and change the url in the `cloud-config.source.js` file.
@@ -110,4 +110,5 @@ Structure of the repository:
 
 ## TODO
 
+- [ ] Support Azure Premium Storage and Managed Disks
 - [ ] Switch WSREP engine from rsync to xtrabackup (see https://github.com/docker-library/mariadb/pull/47)
