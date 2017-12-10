@@ -34,7 +34,7 @@ module.exports = function(grunt) {
         },
         watch: {
             scripts: {
-                files: ['sources/*.source.*', 'sources/cloud-config/*'],
+                files: ['sources/*.source.*', 'sources/cloud-config/*', 'sources/templates/*'],
                 tasks: ['default']
             }
         }

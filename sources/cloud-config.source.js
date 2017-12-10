@@ -6,9 +6,9 @@ var yamlARMSource = require('./yaml-arm.source.js')
 var azureVMSizes = require('./azure-vm-sizes.json')
 
 // URL for the CORS proxy service, to circument the Same-Origin Policy
-// By default we're using the public service by CrossOrigin.me
-// You can grab the source code for the app at https://github.com/technoboy10/crossorigin.me and run your own instance of the CORS proxy, then change the URL below
-var corsProxyUrl = 'https://crossorigin.me/'
+// By default we're using the public service by CORS Anywhere
+// You can grab the source code for the app at https://github.com/Rob--W/cors-anywheree and run your own instance of the CORS proxy, then change the URL below
+var corsProxyUrl = 'https://cors-anywhere.herokuapp.com/'
 
 // Entry-point for the unit. Generate the cloud-config.yaml file
 var cloudConfig = function(formValues, done) {

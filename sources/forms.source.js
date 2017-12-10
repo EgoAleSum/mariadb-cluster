@@ -31,7 +31,7 @@ var prepareFormMode = function() {
 }
 
 var dataDiskUpdate = function(sizeName) {
-    // Maximum number of data disks, limited to 40
+    // Maximum number of data disks, limited to 40 (max for a storage account)
     var max = 2
     var size = azureVMSizes[sizeName]
     if(size && size.disks) {
@@ -44,7 +44,7 @@ var dataDiskUpdate = function(sizeName) {
     // Add options
     var $dataDiskSelect = $('#data-disks')
     $dataDiskSelect.empty()
-    for(var i = 2; i <= max; i++) {
+    for(var i = 1; i <= max; i++) {
         $dataDiskSelect.append('<option value="'+i+'">'+i+'</option>')
     }
     
@@ -55,11 +55,22 @@ var dataDiskUpdate = function(sizeName) {
 var nodeSize = function() {
     // Populate all nodes in the select
     var $nodeSizeSelect = $('#node-size')
+    var lastSeries = ''
+    var allOptions = ''
     for(var k in azureVMSizes) {
         if(azureVMSizes.hasOwnProperty(k)) {
-            $nodeSizeSelect.append('<option value="'+k+'">'+k+'</option>')
+            if(azureVMSizes[k].series != lastSeries) {
+                if(lastSeries) {
+                    allOptions += '</optgroup>'
+                }
+                lastSeries = azureVMSizes[k].series
+                allOptions += '<optgroup label="'+lastSeries+'-series">'
+            }
+            allOptions += '<option value="'+k+'">'+k+'</option>'
         }
     }
+    allOptions += '</optgroup>'
+    $nodeSizeSelect.append(allOptions)
     
     // Bind action to change event, to update select for data disk count
     $nodeSizeSelect.on('change', function() {

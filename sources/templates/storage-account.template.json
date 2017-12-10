@@ -1,7 +1,7 @@
 {
 	"apiVersion": "2015-06-15",
 	"type": "Microsoft.Storage/storageAccounts",
-	"name": "[toLower( concat( parameters('storageAccountNamePrefix'), 'vhd', copyindex(), uniqueString(resourceGroup().id) ) )]",
+	"name": "[toLower( concat(copyindex(), parameters('storageAccountNamePrefix'), 'vhd', uniqueString(resourceGroup().id) ) )]",
 	"copy": {
 		"name": "storageLoop",
 		"count": "[parameters('numberOfNodes')]"

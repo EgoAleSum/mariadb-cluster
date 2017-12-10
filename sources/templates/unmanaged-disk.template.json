@@ -1,9 +1,9 @@
 {
 	"name": "DataDisk*",
-	"diskSizeGB": "1023",
+	"diskSizeGB": "4095",
 	"lun": 0,
 	"vhd": {
-		"uri": "[concat('http://', toLower( concat( parameters('storageAccountNamePrefix'), 'vhd', copyindex(), uniqueString(resourceGroup().id) ) ), '.blob.core.windows.net/vhds/',variables('vmNamePrefix'), copyindex(),'-DataDisk*', '.vhd')]"
+		"uri": "[concat('http://', toLower( concat( copyindex(), parameters('storageAccountNamePrefix'), 'vhd', uniqueString(resourceGroup().id) ) ), '.blob.core.windows.net/vhds/',variables('vmNamePrefix'), copyindex(),'-DataDisk*', '.vhd')]"
 	},
 	"caching": "None",
 	"createOption": "Empty"
